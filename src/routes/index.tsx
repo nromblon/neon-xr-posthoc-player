@@ -1,3 +1,9 @@
+import { FolderPicker } from '@/components/ui/folder-picker'
+import { Input } from '@/components/ui/input'
+import { Separator } from '@/components/ui/separator'
+import { ColorPicker, ColorPickerSelection, ColorPickerEyeDropper, ColorPickerHue, ColorPickerAlpha, ColorPickerOutput, ColorPickerFormat } from '@/components/ui/shadcn-io/color-picker'
+import { SliderNumberInput } from '@/components/ui/slider-number-input'
+import { Label } from '@radix-ui/react-label'
 import { createFileRoute } from '@tanstack/react-router'
 import {
   Route as RouteIcon,
@@ -7,10 +13,76 @@ import {
   Waves,
   Zap,
 } from 'lucide-react'
+import React from 'react'
+import Color from 'color'
 
 export const Route = createFileRoute('/')({ component: App })
 
-function App() {
+function App(){
+  const [radius, setRadius] = React.useState(33);
+  const [stroke, setStroke] = React.useState(33);
+  const [color, setColor] = React.useState([0, 0, 0, 1]);
+
+  return (
+    <div className='display flex justify-between items-center h-[calc(100vh-2rem)] my-4'>
+      <div id="video-div" className='outline-1 outline-red-600 ml-5 h-full flex-1'>
+        <h1> Wazzap </h1>
+      </div>
+      <div id="settings-div" className='display flex flex-col gap-2 p-5 mx-5 border h-full w-96 rounded-lg'>
+        <Label className="text-md font-bold mb-2"> Setup </Label>
+        <Label className="text-sm" htmlFor='xr-file-upload'> XR Video (Scene Video) </Label>
+        <Input id='xr-file-upload' type="file" className='text-muted-foreground' />
+        <Label className="text-sm" htmlFor='neon-gaze-upload'> Neon Gaze Data </Label>
+        <FolderPicker onPick={(f)=> {
+          console.log(f);
+        }} />
+        <Separator className='mt-4 mb-2' />
+        <Label className="text-md font-bold mb-2"> Align </Label>
+        <Label className="text-sm" htmlFor='gaze-start-time'> Gaze Start Time </Label>
+        <div id='gaze-start-time' className='flex flex-row items-center gap-2'>
+          <Input id='m-gst' type="number" placeholder='min' min={0} max={9999} className='w-18' />
+          :
+          <Input id='s-gst' type="number" placeholder='sec' min={0} max={59} className='w-16' />
+          :
+          <Input id='ms-gst' type="number" placeholder='ms' min={0} max={999} className='w-17'/>
+        </div>
+        <Separator className='mt-4 mb-2' />
+        <Label className="text-md font-bold mb-2"> Gaze Visualizer Style </Label>
+        <Label className="text-sm" htmlFor='xr-file-upload'> Radius </Label>
+        <SliderNumberInput
+          value={radius}
+          onValueChange={setRadius}
+          min={1}
+          max={100}
+        />
+        <Label className="text-sm" htmlFor='xr-file-upload'> Stroke Width </Label>
+        <SliderNumberInput
+          value={stroke}
+          onValueChange={setStroke}
+          min={1}
+          max={100}
+        />
+        <Label className="text-sm" htmlFor='xr-file-upload'> Color </Label>
+        <ColorPicker value={color} onChange={setColor} className="max-w-sm rounded-md border bg-background p-4 shadow-sm"  >
+            <ColorPickerSelection />
+            <div className="flex items-center gap-4">
+            <ColorPickerEyeDropper />
+            <div className="grid w-full gap-1">
+                <ColorPickerHue />
+                <ColorPickerAlpha />
+            </div>
+            </div>
+            <div className="flex items-center gap-2">
+            <ColorPickerOutput />
+            <ColorPickerFormat />
+            </div>
+        </ColorPicker>
+      </div>
+    </div>
+  )
+}
+
+function App2() {
   const features = [
     {
       icon: <Zap className="w-12 h-12 text-cyan-400" />,
