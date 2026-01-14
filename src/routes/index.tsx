@@ -15,6 +15,9 @@ import {
   ColorPickerSelection,
 } from '@/components/ui/shadcn-io/color-picker'
 import { SliderNumberInput } from '@/components/ui/slider-number-input'
+import VideoPlayer from '@/components/Videoplayer'
+import { Empty,  EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
+import { BookXIcon } from 'lucide-react'
 
 export const Route = createFileRoute('/')({ component: App })
 
@@ -22,14 +25,29 @@ function App() {
   const [radius, setRadius] = React.useState(33)
   const [stroke, setStroke] = React.useState(33)
   const [color, setColor] = React.useState('#000000ff')
+  const [gazeDataFolder, setGazeDataFolder] = React.useState<string | null>(null)
+  const [gazeFile, setGazeFile] = React.useState<File | null>(null)
+  const [videoFile, setVideoFile] = React.useState<File | null>(null)
 
   return (
     <div className="display flex justify-between items-center h-[calc(100vh-2rem)] my-4">
       <div
         id="video-div"
-        className="outline-1 outline-red-600 ml-5 h-full flex-1"
+        className="flex items-center justify-center h-full flex-1"
       >
-        <h1> Wazzap </h1>
+        {gazeFile && videoFile ? (
+          <VideoPlayer gazeDataFile={gazeFile} videoFile={videoFile} circleConfig={{ stroke, radius, color }} />
+        ) : 
+          <Empty>
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <BookXIcon />
+              </EmptyMedia>
+              <EmptyTitle>No data</EmptyTitle>
+              <EmptyDescription>Choose XR Video and Gaze Data Folder</EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+      }
       </div>
       <div
         id="settings-div"
