@@ -21,7 +21,7 @@ export const Route = createFileRoute('/')({ component: App })
 function App(){
   const [radius, setRadius] = React.useState(33);
   const [stroke, setStroke] = React.useState(33);
-  const [color, setColor] = React.useState([0, 0, 0, 1]);
+  const [color, setColor] = React.useState('#000000ff');
 
   return (
     <div className='display flex justify-between items-center h-[calc(100vh-2rem)] my-4'>
@@ -63,7 +63,14 @@ function App(){
           max={100}
         />
         <Label className="text-sm" htmlFor='xr-file-upload'> Color </Label>
-        <ColorPicker value={color} onChange={setColor} className="max-w-sm rounded-md border bg-background p-4 shadow-sm"  >
+        <ColorPicker defaultValue={color} 
+          onChange={(v) => {
+            const c = Color(v);
+            console.log(c.hexa());
+            setColor(c.hexa());
+            // setColor([v[0], v[1], v[2], v[3]]);
+          }} 
+           className="max-w-sm rounded-md border bg-background p-4 shadow-sm"  >
             <ColorPickerSelection />
             <div className="flex items-center gap-4">
             <ColorPickerEyeDropper />
