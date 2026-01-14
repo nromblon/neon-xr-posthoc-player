@@ -1,16 +1,3 @@
-import { FolderPicker } from '@/components/ui/folder-picker'
-import { Input } from '@/components/ui/input'
-import { Separator } from '@/components/ui/separator'
-import {
-  ColorPicker,
-  ColorPickerSelection,
-  ColorPickerEyeDropper,
-  ColorPickerHue,
-  ColorPickerAlpha,
-  ColorPickerOutput,
-  ColorPickerFormat,
-} from '@/components/ui/shadcn-io/color-picker'
-import { SliderNumberInput } from '@/components/ui/slider-number-input'
 import { Label } from '@radix-ui/react-label'
 import { createFileRoute } from '@tanstack/react-router'
 import {
@@ -23,6 +10,19 @@ import {
 } from 'lucide-react'
 import React from 'react'
 import Color from 'color'
+import { FolderPicker } from '@/components/ui/folder-picker'
+import { Input } from '@/components/ui/input'
+import { Separator } from '@/components/ui/separator'
+import {
+  ColorPicker,
+  ColorPickerAlpha,
+  ColorPickerEyeDropper,
+  ColorPickerFormat,
+  ColorPickerHue,
+  ColorPickerOutput,
+  ColorPickerSelection,
+} from '@/components/ui/shadcn-io/color-picker'
+import { SliderNumberInput } from '@/components/ui/slider-number-input'
 
 export const Route = createFileRoute('/')({ component: App })
 

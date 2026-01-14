@@ -4,17 +4,18 @@ import Color from 'color'
 import { PipetteIcon } from 'lucide-react'
 import { Slider } from 'radix-ui'
 import {
-  type ComponentProps,
+  
+  
   createContext,
-  type HTMLAttributes,
   memo,
   useCallback,
   useContext,
   useEffect,
   useMemo,
   useRef,
-  useState,
+  useState
 } from 'react'
+import type {ComponentProps, HTMLAttributes} from 'react';
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
