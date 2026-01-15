@@ -10,6 +10,7 @@ import TanStackQueryDevtools from '../integrations/tanstack-query/devtools'
 import appCss from '../styles.css?url'
 
 import type { QueryClient } from '@tanstack/react-query'
+import { Toast } from 'radix-ui'
 
 interface MyRouterContext {
   queryClient: QueryClient
@@ -26,7 +27,7 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
         content: 'width=device-width, initial-scale=1',
       },
       {
-        title: 'TanStack Start Starter',
+        title: 'Posthoc Neon XR Player',
       },
     ],
     links: [
@@ -47,6 +48,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
+        <Toast.Provider duration={4000}>
         {children}
         <TanStackDevtools
           config={{
@@ -60,6 +62,8 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             TanStackQueryDevtools,
           ]}
         />
+        <Toast.Viewport className="fixed bottom-0 right-0 m-4 flex flex-col gap-2 z-50" />
+        </Toast.Provider>
         <Scripts />
       </body>
     </html>

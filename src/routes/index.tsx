@@ -18,6 +18,7 @@ import { SliderNumberInput } from '@/components/ui/slider-number-input'
 import VideoPlayer from '@/components/Videoplayer'
 import { Empty,  EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
 import { BookXIcon } from 'lucide-react'
+import { Toast } from 'radix-ui'
 
 export const Route = createFileRoute('/')({ component: App })
 
@@ -25,9 +26,22 @@ function App() {
   const [radius, setRadius] = React.useState(33)
   const [stroke, setStroke] = React.useState(33)
   const [color, setColor] = React.useState('#000000ff')
-  const [gazeDataFolder, setGazeDataFolder] = React.useState<string | null>(null)
+
+  const [gazeDataFileList, setGazeDataFileList] = React.useState<FileList | null>(null)
   const [gazeFile, setGazeFile] = React.useState<File | null>(null)
+  const [shouldShowGazeError, showGazeError] = React.useState(false)
+
   const [videoFile, setVideoFile] = React.useState<File | null>(null)
+
+  const findGazeFile = (file: FileList) => {
+    for (let i = 0; i < file.length; i++) {
+      const f = file.item(i)
+      if (f && f.name.endsWith('gaze.csv')) {
+        return f
+      }
+    }
+    return null
+  }
 
   return (
     <div className="display flex justify-between items-center my-4">
@@ -62,6 +76,12 @@ function App() {
           id="xr-file-upload"
           type="file"
           className="text-muted-foreground"
+          onChange={(e) => {
+            const file = e.target.files?.[0]
+            if (file) {
+              setVideoFile(file);
+            }
+          }}
         />
         <Label className="text-sm" htmlFor="neon-gaze-upload">
           {' '}
@@ -70,8 +90,34 @@ function App() {
         <FolderPicker
           onPick={(f) => {
             console.log(f)
+            setGazeDataFileList(f);
+            const gf = findGazeFile(f);
+            if (gf) {
+              setGazeFile(gf);
+            } 
+            
+            if (!gf || f.length === 0) {
+              setGazeFile(null);
+              showGazeError(true);
+              // alert('Unable to find valid gaze data file. Please select a folder containing "gaze.csv".')
+              // console.log('missing gaze file')
+            }
           }}
         />
+        <>
+          {shouldShowGazeError && (
+            <Toast.Root className='flex flex-col gap-2 bg-primary-foreground border-2 border-accent shadow-sm w-80 items-start justify-center rounded-lg p-4'
+              onOpenChange={}>
+              <Toast.Title className="font-medium text-foreground text-md">
+                Gaze Data Selection Error
+              </Toast.Title>
+              <Toast.Description className="text-foreground wrap-normal text-sm">
+                Unable to find valid gaze data file. {'\n'} Please select a folder
+                containing 'gaze.csv'.
+              </Toast.Description>
+            </Toast.Root>
+          )}
+        </>
         <Separator className="mt-4 mb-2" />
         <Label className="text-md font-bold mb-2"> Align </Label>
         <Label className="text-sm" htmlFor="gaze-start-time">
@@ -141,7 +187,6 @@ function App() {
             const c = Color(v)
             console.log(c.hexa())
             setColor(c.hexa())
-            // setColor([v[0], v[1], v[2], v[3]]);
           }}
           className="max-w-sm h-70 rounded-md border bg-background p-4 shadow-sm"
         >
