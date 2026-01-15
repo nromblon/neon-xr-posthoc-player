@@ -30,7 +30,7 @@ function App() {
   const [videoFile, setVideoFile] = React.useState<File | null>(null)
 
   return (
-    <div className="display flex justify-between items-center h-[calc(100vh-2rem)] my-4">
+    <div className="display flex justify-between items-center my-4">
       <div
         id="video-div"
         className="flex items-center justify-center h-full flex-1"
@@ -51,7 +51,7 @@ function App() {
       </div>
       <div
         id="settings-div"
-        className="display flex flex-col gap-2 p-5 mx-5 border h-full w-96 rounded-lg"
+        className="display flex flex-col gap-2 p-5 mx-5 border h-max w-96 rounded-lg"
       >
         <Label className="text-md font-bold mb-2"> Setup </Label>
         <Label className="text-sm" htmlFor="xr-file-upload">
@@ -143,7 +143,7 @@ function App() {
             setColor(c.hexa())
             // setColor([v[0], v[1], v[2], v[3]]);
           }}
-          className="max-w-sm rounded-md border bg-background p-4 shadow-sm"
+          className="max-w-sm h-70 rounded-md border bg-background p-4 shadow-sm"
         >
           <ColorPickerSelection />
           <div className="flex items-center gap-4">
