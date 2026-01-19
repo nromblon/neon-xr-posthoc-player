@@ -19,6 +19,7 @@ import VideoPlayer from '@/components/Videoplayer'
 import { Empty,  EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
 import { BookXIcon } from 'lucide-react'
 import { Toast } from 'radix-ui'
+import { Button } from '@/components/ui/button'
 
 export const Route = createFileRoute('/')({ component: App })
 
@@ -30,11 +31,18 @@ function App() {
   const folderPickerRef = useRef<HTMLInputElement | null>(null)
   const [folderPickerKey, setFolderPickerKey] = React.useState(0)
 
+  // File-related states
+  // Gaze Data
   const [gazeDataFileList, setGazeDataFileList] = React.useState<FileList | null>(null)
   const [gazeFile, setGazeFile] = React.useState<File | null>(null)
   const [shouldShowGazeError, showGazeError] = React.useState(false)
-
+  // Scene Video Data
   const [videoFile, setVideoFile] = React.useState<File | null>(null)
+
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  // Align-related state
+  const [gazeStartMs, setGazeStartMs] = React.useState<number>(0);
 
   const findGazeFile = (file: FileList) => {
     for (let i = 0; i < file.length; i++) {
@@ -46,6 +54,35 @@ function App() {
     return null
   }
 
+  const setCurrentTimeAsGazeStart = () => {
+    if (videoRef.current) {
+      const currentTime = videoRef.current.currentTime
+      const minutes = Math.floor(currentTime / 60)
+      const seconds = Math.floor(currentTime % 60)
+      const milliseconds = Math.floor((currentTime * 1000) % 1000)
+
+      const minInput = document.getElementById('m-gst') as HTMLInputElement
+      const secInput = document.getElementById('s-gst') as HTMLInputElement
+      const msInput = document.getElementById('ms-gst') as HTMLInputElement
+      minInput.value = minutes.toString()
+      secInput.value = seconds.toString()
+      msInput.value = milliseconds.toString()
+
+      setGazeStartMs(currentTime * 1000);
+    }
+  }
+
+  const recomputeGazeStartMs = () => {
+    const minInput = document.getElementById('m-gst') as HTMLInputElement
+    const secInput = document.getElementById('s-gst') as HTMLInputElement
+    const msInput = document.getElementById('ms-gst') as HTMLInputElement
+    const minutes = parseInt(minInput.value) || 0
+    const seconds = parseInt(secInput.value) || 0
+    const milliseconds = parseInt(msInput.value) || 0
+    const totalMs = minutes * 60 * 1000 + seconds * 1000 + milliseconds
+    setGazeStartMs(totalMs);
+  }
+
   return (
     <div className="display flex justify-between items-center my-4">
       <div
@@ -54,9 +91,10 @@ function App() {
       >
         {gazeFile && videoFile ? (
           <VideoPlayer 
-          gazeDataFile={gazeFile} 
-          videoFile={videoFile} 
-          circleConfig={{ stroke, radius, color }} 
+            videoRef={videoRef}
+            gazeDataFile={gazeFile} 
+            videoFile={videoFile} 
+            circleConfig={{ stroke, radius, color }} 
           />
         ) : 
           <Empty>
@@ -134,6 +172,9 @@ function App() {
         </Toast.Root>
         <Separator className="mt-4 mb-2" />
         <Label className="text-md font-bold mb-2"> Align </Label>
+        <Button onClick={setCurrentTimeAsGazeStart} disabled={!videoFile || !gazeFile}>
+          Set Current Time as Gaze Start Time
+        </Button>
         <Label className="text-sm" htmlFor="gaze-start-time">
           {' '}
           Gaze Start Time{' '}
@@ -143,8 +184,10 @@ function App() {
             id="m-gst"
             type="number"
             placeholder="min"
+            disabled={!videoFile || !gazeFile}
             min={0}
             max={9999}
+            onChange={recomputeGazeStartMs}
             className="w-18"
           />
           :
@@ -152,8 +195,10 @@ function App() {
             id="s-gst"
             type="number"
             placeholder="sec"
+            disabled={!videoFile || !gazeFile}
             min={0}
             max={59}
+            onChange={recomputeGazeStartMs}
             className="w-16"
           />
           :
@@ -161,8 +206,10 @@ function App() {
             id="ms-gst"
             type="number"
             placeholder="ms"
+            disabled={!videoFile || !gazeFile}
             min={0}
             max={999}
+            onChange={recomputeGazeStartMs}
             className="w-17"
           />
         </div>

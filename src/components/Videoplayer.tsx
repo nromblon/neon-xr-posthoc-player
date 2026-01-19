@@ -8,6 +8,7 @@ interface CircleConfig {
 
 interface VideoPlayerProps {
   gazeDataFile: File;
+  videoRef: React.RefObject<HTMLVideoElement | null>;
   videoFile: File;
   circleConfig: CircleConfig;
 }
@@ -32,10 +33,10 @@ const defaultCircleConfig: CircleConfig = {
 
 const VideoPlayer: React.FC<VideoPlayerProps> = ({
   gazeDataFile,
+  videoRef,
   videoFile,
   circleConfig = defaultCircleConfig,
 }) => {
-  const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gazeDataRef = useRef<GazeDataPoint[]>([]);
   const gazeStartRef = useRef<number | null>(null);
