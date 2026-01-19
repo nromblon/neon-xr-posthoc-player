@@ -95,6 +95,7 @@ function App() {
             gazeDataFile={gazeFile} 
             videoFile={videoFile} 
             circleConfig={{ stroke, radius, color }} 
+            gazeStartMs={gazeStartMs}
           />
         ) : 
           <Empty>

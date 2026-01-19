@@ -11,6 +11,7 @@ interface VideoPlayerProps {
   videoRef: React.RefObject<HTMLVideoElement | null>;
   videoFile: File;
   circleConfig: CircleConfig;
+  gazeStartMs: number;
 }
 
 interface GazeDataPoint {
@@ -36,6 +37,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   videoRef,
   videoFile,
   circleConfig = defaultCircleConfig,
+  gazeStartMs,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gazeDataRef = useRef<GazeDataPoint[]>([]);
@@ -44,11 +46,18 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const gazeSourceSizeRef = useRef({ width: 1600, height: 1200 });
   const circleConfigRef = useRef(circleConfig);
   const drawFrameRef = useRef<(() => void) | null>(null);
+  const gazeStartMsRef = useRef(gazeStartMs);
 
   useEffect(() => {
     circleConfigRef.current = circleConfig;
     drawFrameRef.current?.();
   }, [circleConfig]);
+
+  useEffect(() => {
+    gazeStartMsRef.current = gazeStartMs;
+    gazeIndexRef.current = 0;
+    drawFrameRef.current?.();
+  }, [gazeStartMs]);
 
   useEffect(() => {
     const loadGazeData = async () => {
@@ -151,12 +160,39 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     const drawFrame = () => {
       const gazeData = gazeDataRef.current;
       const gazeStart = gazeStartRef.current;
+      const drawNoGaze = () => {
+        const padding = 10;
+        const text = 'No gaze yet';
+        context.save();
+        context.font = '12px system-ui, -apple-system, Segoe UI, sans-serif';
+        const metrics = context.measureText(text);
+        const textWidth = metrics.width;
+        const textHeight = 12;
+        const boxWidth = textWidth + padding * 2;
+        const boxHeight = textHeight + padding;
+        const x = canvas.width - boxWidth - 8;
+        const y = 8;
+        context.fillStyle = 'rgba(0, 0, 0, 0.4)';
+        context.fillRect(x, y, boxWidth, boxHeight);
+        context.fillStyle = 'rgba(255, 255, 255, 0.85)';
+        context.fillText(text, x + padding, y + padding + textHeight / 2);
+        context.restore();
+      };
+
       if (!gazeData.length || gazeStart === null) {
         context.clearRect(0, 0, canvas.width, canvas.height);
+        drawNoGaze();
         return;
       }
 
-      const videoTimeNs = gazeStart + video.currentTime * 1_000_000_000;
+      const offsetSeconds = gazeStartMsRef.current / 1000;
+      if (video.currentTime < offsetSeconds) {
+        context.clearRect(0, 0, canvas.width, canvas.height);
+        drawNoGaze();
+        return;
+      }
+      const videoTimeNs =
+        gazeStart + (video.currentTime - offsetSeconds) * 1_000_000_000;
       let i = gazeIndexRef.current;
       while (i + 1 < gazeData.length && gazeData[i + 1].timestampNs <= videoTimeNs) {
         i += 1;
