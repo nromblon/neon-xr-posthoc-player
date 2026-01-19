@@ -53,7 +53,11 @@ function App() {
         className="flex items-center justify-center h-full flex-1"
       >
         {gazeFile && videoFile ? (
-          <VideoPlayer gazeDataFile={gazeFile} videoFile={videoFile} circleConfig={{ stroke, radius, color }} />
+          <VideoPlayer 
+          gazeDataFile={gazeFile} 
+          videoFile={videoFile} 
+          circleConfig={{ stroke, radius, color }} 
+          />
         ) : 
           <Empty>
             <EmptyHeader>
