@@ -23,9 +23,9 @@ import { Toast } from 'radix-ui'
 export const Route = createFileRoute('/')({ component: App })
 
 function App() {
-  const [radius, setRadius] = React.useState(33)
-  const [stroke, setStroke] = React.useState(33)
-  const [color, setColor] = React.useState('#000000ff')
+  const [radius, setRadius] = React.useState(14)
+  const [stroke, setStroke] = React.useState(5)
+  const [color, setColor] = React.useState('#000000AB')
 
   const folderPickerRef = useRef<HTMLInputElement | null>(null)
   const [folderPickerKey, setFolderPickerKey] = React.useState(0)
@@ -197,6 +197,7 @@ function App() {
         </Label>
         <ColorPicker
           defaultValue={color}
+          color={color}
           onChange={(v) => {
             const c = Color(v)
             console.log(c.hexa())
