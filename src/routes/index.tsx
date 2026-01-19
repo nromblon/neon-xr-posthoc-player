@@ -1,6 +1,6 @@
 import { Label } from '@radix-ui/react-label'
 import { createFileRoute } from '@tanstack/react-router'
-import React from 'react'
+import React, { useRef } from 'react'
 import Color from 'color'
 import { FolderPicker } from '@/components/ui/folder-picker'
 import { Input } from '@/components/ui/input'
@@ -26,6 +26,9 @@ function App() {
   const [radius, setRadius] = React.useState(33)
   const [stroke, setStroke] = React.useState(33)
   const [color, setColor] = React.useState('#000000ff')
+
+  const folderPickerRef = useRef<HTMLInputElement | null>(null)
+  const [folderPickerKey, setFolderPickerKey] = React.useState(0)
 
   const [gazeDataFileList, setGazeDataFileList] = React.useState<FileList | null>(null)
   const [gazeFile, setGazeFile] = React.useState<File | null>(null)
@@ -88,6 +91,8 @@ function App() {
           Neon Gaze Data{' '}
         </Label>
         <FolderPicker
+          key={folderPickerKey}
+          inputRef={folderPickerRef}
           onPick={(f) => {
             console.log(f)
             setGazeDataFileList(f);
@@ -96,28 +101,33 @@ function App() {
               setGazeFile(gf);
             } 
             
+            console.log(gf);
             if (!gf || f.length === 0) {
               setGazeFile(null);
               showGazeError(true);
+              setFolderPickerKey((k) => k + 1)
+              if (folderPickerRef.current) {
+                folderPickerRef.current.value = '';
+              }
               // alert('Unable to find valid gaze data file. Please select a folder containing "gaze.csv".')
               // console.log('missing gaze file')
             }
           }}
         />
-        <>
-          {shouldShowGazeError && (
-            <Toast.Root className='flex flex-col gap-2 bg-primary-foreground border-2 border-accent shadow-sm w-80 items-start justify-center rounded-lg p-4'
-              onOpenChange={}>
-              <Toast.Title className="font-medium text-foreground text-md">
-                Gaze Data Selection Error
-              </Toast.Title>
-              <Toast.Description className="text-foreground wrap-normal text-sm">
-                Unable to find valid gaze data file. {'\n'} Please select a folder
-                containing 'gaze.csv'.
-              </Toast.Description>
-            </Toast.Root>
-          )}
-        </>
+        <Toast.Root
+          className="flex flex-col gap-2 ToastRoot bg-destructive shadow-sm w-80 items-start justify-center rounded-lg p-4"
+          open={shouldShowGazeError}
+          duration={3000}
+          onOpenChange={showGazeError}
+        >
+          <Toast.Title className="font-medium text-neutral-50 text-md">
+            Gaze Data Selection Error
+          </Toast.Title>
+          <Toast.Description className="wrap-normal text-neutral-50 text-sm">
+            Unable to find valid gaze data file. {'\n'} Please select a folder
+            containing 'gaze.csv'.
+          </Toast.Description>
+        </Toast.Root>
         <Separator className="mt-4 mb-2" />
         <Label className="text-md font-bold mb-2"> Align </Label>
         <Label className="text-sm" htmlFor="gaze-start-time">

@@ -1,7 +1,6 @@
 'use client'
 
 import * as React from 'react'
-import { Button } from '@/components/ui/button'
 import { InputGroup, InputGroupAddon } from '@/components/ui/input-group'
 import { cn } from '@/lib/utils'
 
@@ -10,6 +9,7 @@ type FolderInputProps = {
   placeholder?: string
   buttonLabel?: string
   className?: string
+  inputRef?: React.RefObject<HTMLInputElement | null>
 }
 
 export function FolderPicker({
@@ -17,8 +17,12 @@ export function FolderPicker({
   placeholder = 'No folder chosen',
   buttonLabel = 'Choose Folder',
   className,
+  inputRef,
 }: FolderInputProps) {
-  const inputRef = React.useRef<HTMLInputElement>(null)
+
+  if (inputRef === undefined) {
+    inputRef = React.useRef<HTMLInputElement>(null)
+  }
   const [label, setLabel] = React.useState(placeholder)
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
