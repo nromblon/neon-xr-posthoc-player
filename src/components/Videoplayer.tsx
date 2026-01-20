@@ -40,7 +40,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   gazeStartMs,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const gazeDataRef = useRef<GazeDataPoint[]>([]);
+  const gazeDataRef = useRef<Array<GazeDataPoint>>([]);
   const gazeStartRef = useRef<number | null>(null);
   const gazeIndexRef = useRef(0);
   const gazeSourceSizeRef = useRef({ width: 1600, height: 1200 });

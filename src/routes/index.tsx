@@ -2,6 +2,8 @@ import { Label } from '@radix-ui/react-label'
 import { createFileRoute } from '@tanstack/react-router'
 import React, { useRef } from 'react'
 import Color from 'color'
+import { BookXIcon } from 'lucide-react'
+import { Toast } from 'radix-ui'
 import { FolderPicker } from '@/components/ui/folder-picker'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
@@ -17,8 +19,6 @@ import {
 import { SliderNumberInput } from '@/components/ui/slider-number-input'
 import VideoPlayer from '@/components/Videoplayer'
 import { Empty,  EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
-import { BookXIcon } from 'lucide-react'
-import { Toast } from 'radix-ui'
 import { Button } from '@/components/ui/button'
 
 export const Route = createFileRoute('/')({ component: App })
