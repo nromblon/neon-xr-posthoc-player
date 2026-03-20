@@ -16,6 +16,7 @@ interface VideoPlayerProps {
   videoFile: File;
   circleConfig: CircleConfig;
   gazeStartMs: number;
+  onFrameDurationChange?: (frameDurationSeconds: number) => void;
 }
 
 interface GazeDataPoint {
@@ -75,6 +76,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   videoFile,
   circleConfig = defaultCircleConfig,
   gazeStartMs,
+  onFrameDurationChange,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const layerCanvasRefs = useRef<Record<string, HTMLCanvasElement | null>>({});
@@ -364,6 +366,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
           metadata.mediaTime > previousFrameTime
         ) {
           frameDurationRef.current = metadata.mediaTime - previousFrameTime;
+          onFrameDurationChange?.(frameDurationRef.current);
         }
         previousFrameTimeRef.current = metadata.mediaTime;
         scheduleFrameProbe();
@@ -402,7 +405,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       video.removeEventListener('timeupdate', handleTimeUpdate);
       video.removeEventListener('durationchange', handleDurationChange);
     };
-  }, [videoRef]);
+  }, [onFrameDurationChange, videoRef]);
 
   const togglePlayback = async () => {
     const video = videoRef.current;
@@ -451,7 +454,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   };
 
   return (
-    <div className="flex w-full max-w-5xl flex-col gap-3">
+    /* Video Player */
+    <div className="flex w-full max-w-5xl flex-col">
       <div className="relative overflow-hidden rounded-lg bg-black shadow-sm">
         <video
           ref={videoRef}
@@ -471,10 +475,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
       <div className="rounded-lg border bg-card p-3 shadow-sm">
         <div className="mb-3 flex flex-wrap items-center gap-2">
-          <Button onClick={() => void togglePlayback()} size="sm">
-            {isPlaying ? <PauseIcon /> : <PlayIcon />}
-            {isPlaying ? 'Pause' : 'Play'}
-          </Button>
           <Button
             onClick={() => stepFrame(-1)}
             size="sm"
@@ -483,6 +483,10 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
           >
             <SkipBackIcon />
             Frame
+          </Button>
+          <Button onClick={() => void togglePlayback()} size="sm" className='w-20'>
+            {isPlaying ? <PauseIcon /> : <PlayIcon />}
+            {isPlaying ? 'Pause' : 'Play'}
           </Button>
           <Button
             onClick={() => stepFrame(1)}

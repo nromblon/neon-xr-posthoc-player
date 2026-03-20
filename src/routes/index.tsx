@@ -2,7 +2,7 @@ import { Label } from '@radix-ui/react-label'
 import { createFileRoute } from '@tanstack/react-router'
 import React, { useRef } from 'react'
 import Color from 'color'
-import { BookXIcon } from 'lucide-react'
+import { BookXIcon, SkipBackIcon, SkipForwardIcon } from 'lucide-react'
 import { Toast } from 'radix-ui'
 import { FolderPicker } from '@/components/ui/folder-picker'
 import { Input } from '@/components/ui/input'
@@ -23,6 +23,8 @@ import { Button } from '@/components/ui/button'
 
 export const Route = createFileRoute('/')({ component: App })
 
+const DEFAULT_FRAME_DURATION_MS = 1000 / 30
+
 function App() {
   const [radius, setRadius] = React.useState(14)
   const [stroke, setStroke] = React.useState(5)
@@ -33,7 +35,6 @@ function App() {
 
   // File-related states
   // Gaze Data
-  const [gazeDataFileList, setGazeDataFileList] = React.useState<FileList | null>(null)
   const [gazeFile, setGazeFile] = React.useState<File | null>(null)
   const [shouldShowGazeError, showGazeError] = React.useState(false)
   // Scene Video Data
@@ -43,6 +44,9 @@ function App() {
 
   // Align-related state
   const [gazeStartMs, setGazeStartMs] = React.useState<number>(0);
+  const [frameDurationMs, setFrameDurationMs] = React.useState<number>(
+    DEFAULT_FRAME_DURATION_MS,
+  );
 
   const findGazeFile = (file: FileList) => {
     for (let i = 0; i < file.length; i++) {
@@ -54,21 +58,30 @@ function App() {
     return null
   }
 
+  const updateGazeStartInputs = (totalMs: number) => {
+    const boundedTotalMs = Math.max(0, Math.round(totalMs))
+    const minutes = Math.floor(boundedTotalMs / 60000)
+    const seconds = Math.floor((boundedTotalMs % 60000) / 1000)
+    const milliseconds = boundedTotalMs % 1000
+
+    const minInput = document.getElementById('m-gst') as HTMLInputElement | null
+    const secInput = document.getElementById('s-gst') as HTMLInputElement | null
+    const msInput = document.getElementById('ms-gst') as HTMLInputElement | null
+
+    if (minInput) minInput.value = minutes.toString()
+    if (secInput) secInput.value = seconds.toString().padStart(2, '0')
+    if (msInput) msInput.value = milliseconds.toString().padStart(3, '0')
+  }
+
+  const setGazeStartTime = (nextGazeStartMs: number) => {
+    const boundedGazeStartMs = Math.max(0, Math.round(nextGazeStartMs))
+    updateGazeStartInputs(boundedGazeStartMs)
+    setGazeStartMs(boundedGazeStartMs)
+  }
+
   const setCurrentTimeAsGazeStart = () => {
     if (videoRef.current) {
-      const currentTime = videoRef.current.currentTime
-      const minutes = Math.floor(currentTime / 60)
-      const seconds = Math.floor(currentTime % 60)
-      const milliseconds = Math.floor((currentTime * 1000) % 1000)
-
-      const minInput = document.getElementById('m-gst') as HTMLInputElement
-      const secInput = document.getElementById('s-gst') as HTMLInputElement
-      const msInput = document.getElementById('ms-gst') as HTMLInputElement
-      minInput.value = minutes.toString()
-      secInput.value = seconds.toString()
-      msInput.value = milliseconds.toString()
-
-      setGazeStartMs(currentTime * 1000);
+      setGazeStartTime(videoRef.current.currentTime * 1000)
     }
   }
 
@@ -81,6 +94,10 @@ function App() {
     const milliseconds = parseInt(msInput.value) || 0
     const totalMs = minutes * 60 * 1000 + seconds * 1000 + milliseconds
     setGazeStartMs(totalMs);
+  }
+
+  const shiftGazeStartByFrame = (direction: 1 | -1) => {
+    setGazeStartTime(gazeStartMs + direction * frameDurationMs)
   }
 
   return (
@@ -96,6 +113,11 @@ function App() {
             videoFile={videoFile} 
             circleConfig={{ stroke, radius, color }} 
             gazeStartMs={gazeStartMs}
+            onFrameDurationChange={(frameDurationSeconds) => {
+              if (frameDurationSeconds > 0) {
+                setFrameDurationMs(frameDurationSeconds * 1000)
+              }
+            }}
           />
         ) : 
           <Empty>
@@ -138,7 +160,6 @@ function App() {
           inputRef={folderPickerRef}
           onPick={(f) => {
             console.log(f)
-            setGazeDataFileList(f);
             const gf = findGazeFile(f);
             if (gf) {
               setGazeFile(gf);
@@ -181,6 +202,16 @@ function App() {
           Gaze Start Time{' '}
         </Label>
         <div id="gaze-start-time" className="flex flex-row items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            title="Shift gaze start to previous frame"
+            onClick={() => shiftGazeStartByFrame(-1)}
+            disabled={!videoFile || !gazeFile}
+          >
+            <SkipBackIcon />
+          </Button>
           <Input
             id="m-gst"
             type="number"
@@ -213,6 +244,16 @@ function App() {
             onChange={recomputeGazeStartMs}
             className="w-17"
           />
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            title="Shift gaze start to next frame"
+            onClick={() => shiftGazeStartByFrame(1)}
+            disabled={!videoFile || !gazeFile}
+          >
+            <SkipForwardIcon />
+          </Button>
         </div>
         <Separator className="mt-4 mb-2" />
         <Label className="text-md font-bold mb-2">
