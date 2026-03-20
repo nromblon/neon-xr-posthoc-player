@@ -1,4 +1,11 @@
-import { PauseIcon, PlayIcon, SkipBackIcon, SkipForwardIcon } from 'lucide-react';
+import {
+  PauseIcon,
+  PlayIcon,
+  SkipBackIcon,
+  SkipForwardIcon,
+  Volume2Icon,
+  VolumeOffIcon,
+} from 'lucide-react';
 import React, { useEffect, useState, useRef } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -93,9 +100,12 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [isMuted, setIsMuted] = useState(false);
+  const [volume, setVolume] = useState(1);
   const [enabledLayers, setEnabledLayers] = useState<Record<string, boolean>>({
     gaze: true,
   });
+  const lastVolumeRef = useRef(1);
 
   const overlayLayers: Array<OverlayLayer> = [
     {
@@ -354,6 +364,14 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       setDuration(Number.isFinite(video.duration) ? video.duration : 0);
     };
 
+    const handleVolumeChange = () => {
+      setIsMuted(video.muted);
+      setVolume(video.volume);
+      if (video.volume > 0) {
+        lastVolumeRef.current = video.volume;
+      }
+    };
+
     const scheduleFrameProbe = () => {
       if (typeof video.requestVideoFrameCallback !== 'function') {
         return;
@@ -381,9 +399,11 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     video.addEventListener('seeked', handleSeeked);
     video.addEventListener('timeupdate', handleTimeUpdate);
     video.addEventListener('durationchange', handleDurationChange);
+    video.addEventListener('volumechange', handleVolumeChange);
 
     syncCanvasSize();
     drawFrame();
+    handleVolumeChange();
     scheduleFrameProbe();
 
     return () => {
@@ -404,6 +424,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       video.removeEventListener('seeked', handleSeeked);
       video.removeEventListener('timeupdate', handleTimeUpdate);
       video.removeEventListener('durationchange', handleDurationChange);
+      video.removeEventListener('volumechange', handleVolumeChange);
     };
   }, [onFrameDurationChange, videoRef]);
 
@@ -446,6 +467,40 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     seekToTime(video.currentTime + direction * frameDuration);
   };
 
+  const toggleMute = () => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (video.muted || video.volume === 0) {
+      const nextVolume = lastVolumeRef.current > 0 ? lastVolumeRef.current : 1;
+      video.muted = false;
+      video.volume = nextVolume;
+      setIsMuted(false);
+      setVolume(nextVolume);
+      return;
+    }
+
+    if (video.volume > 0) {
+      lastVolumeRef.current = video.volume;
+    }
+    video.muted = true;
+    setIsMuted(true);
+  };
+
+  const updateVolume = (nextVolume: number) => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const boundedVolume = clamp(nextVolume, 0, 1);
+    video.volume = boundedVolume;
+    video.muted = boundedVolume === 0;
+    setVolume(boundedVolume);
+    setIsMuted(boundedVolume === 0);
+    if (boundedVolume > 0) {
+      lastVolumeRef.current = boundedVolume;
+    }
+  };
+
   const toggleLayer = (layerId: string) => {
     setEnabledLayers((currentLayers) => ({
       ...currentLayers,
@@ -454,9 +509,10 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   };
 
   return (
-    /* Video Player */
-    <div className="flex w-full max-w-5xl flex-col">
-      <div className="relative overflow-hidden rounded-lg bg-black shadow-sm">
+    /* Video Player Including Controls */
+    <div className="flex w-full max-w-5xl flex-col gap-3">
+      {/* Video and Canvas Container */}
+      <div className="relative overflow-hidden rounded-lg w-fit bg-black shadow-sm self-center">
         <video
           ref={videoRef}
           className="block max-h-[70vh] w-full"
@@ -467,7 +523,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
             key={layer.id}
             ref={setLayerCanvasRef(layer.id)}
             width={640}
-            height={480}
+            height={640}
             className="pointer-events-none absolute inset-0 h-full w-full"
           />
         ))}
@@ -475,6 +531,10 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
       <div className="rounded-lg border bg-card p-3 shadow-sm">
         <div className="mb-3 flex flex-wrap items-center gap-2">
+          <Button onClick={() => void togglePlayback()} size="sm" className='w-20'>
+            {isPlaying ? <PauseIcon /> : <PlayIcon />}
+            {isPlaying ? 'Pause' : 'Play'}
+          </Button>
           <Button
             onClick={() => stepFrame(-1)}
             size="sm"
@@ -483,10 +543,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
           >
             <SkipBackIcon />
             Frame
-          </Button>
-          <Button onClick={() => void togglePlayback()} size="sm" className='w-20'>
-            {isPlaying ? <PauseIcon /> : <PlayIcon />}
-            {isPlaying ? 'Pause' : 'Play'}
           </Button>
           <Button
             onClick={() => stepFrame(1)}
@@ -497,6 +553,29 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
             <SkipForwardIcon />
             Frame
           </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={toggleMute}
+              size="sm"
+              variant="outline"
+              title={isMuted || volume === 0 ? 'Unmute' : 'Mute'}
+            >
+              {isMuted || volume === 0 ? <VolumeOffIcon /> : <Volume2Icon />}
+            </Button>
+            <div className="w-28">
+              <Slider
+                min={0}
+                max={1}
+                step={0.01}
+                value={[isMuted ? 0 : volume]}
+                onValueChange={(values) => {
+                  const [nextVolume = 0] = values;
+                  updateVolume(nextVolume);
+                }}
+                aria-label="Volume"
+              />
+            </div>
+          </div>
           <div className="ml-auto text-sm tabular-nums text-muted-foreground">
             {formatTime(currentTime)} / {formatTime(duration)}
           </div>
