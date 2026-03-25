@@ -1,4 +1,6 @@
 import {
+  MaximizeIcon,
+  MinimizeIcon,
   PauseIcon,
   PlayIcon,
   SkipBackIcon,
@@ -85,6 +87,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   gazeStartMs,
   onFrameDurationChange,
 }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const layerCanvasRefs = useRef<Record<string, HTMLCanvasElement | null>>({});
   const gazeDataRef = useRef<Array<GazeDataPoint>>([]);
@@ -102,6 +105,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [duration, setDuration] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
   const [volume, setVolume] = useState(1);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [enabledLayers, setEnabledLayers] = useState<Record<string, boolean>>({
     gaze: true,
   });
@@ -281,6 +285,21 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     enabledLayersRef.current = enabledLayers;
     drawFrameRef.current?.();
   }, [enabledLayers]);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(document.fullscreenElement === containerRef.current);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener(
+        'fullscreenchange',
+        handleFullscreenChange,
+      );
+    };
+  }, []);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -508,14 +527,29 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     }));
   };
 
+  const toggleFullscreen = async () => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    if (document.fullscreenElement === container) {
+      await document.exitFullscreen();
+      return;
+    }
+
+    await container.requestFullscreen();
+  };
+
   return (
     /* Video Player Including Controls */
     <div className="flex w-full max-w-5xl flex-col gap-3">
       {/* Video and Canvas Container */}
-      <div className="relative overflow-hidden rounded-lg w-fit bg-black shadow-sm self-center">
+      <div
+        ref={containerRef}
+        className="relative w-fit self-center overflow-hidden rounded-lg bg-black shadow-sm"
+      >
         <video
           ref={videoRef}
-          className="block max-h-[70vh] w-full"
+          className="block w-full max-h-[70vh] fullscreen:max-h-screen"
           playsInline
         />
         {overlayLayers.map((layer) => (
@@ -576,6 +610,15 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
               />
             </div>
           </div>
+          <Button
+            onClick={() => void toggleFullscreen()}
+            size="sm"
+            variant="outline"
+            title={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+          >
+            {isFullscreen ? <MinimizeIcon /> : <MaximizeIcon />}
+            {isFullscreen ? 'Window' : 'Fullscreen'}
+          </Button>
           <div className="ml-auto text-sm tabular-nums text-muted-foreground">
             {formatTime(currentTime)} / {formatTime(duration)}
           </div>
