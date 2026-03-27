@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 
 type SliderNumberInputProps = {
+  id?: string
   value: number
   onValueChange: (value: number) => void
   min?: number
@@ -16,6 +17,7 @@ type SliderNumberInputProps = {
 }
 
 export function SliderNumberInput({
+  id,
   value,
   onValueChange,
   min = 0,
@@ -30,7 +32,7 @@ export function SliderNumberInput({
   )
 
   return (
-    <div className={cn('space-y-2', className)}>
+    <div id={id} className={cn('space-y-2', className)}>
       <div className="flex items-center gap-3">
         <Slider
           className="flex-1"

@@ -39,6 +39,8 @@ function App() {
   const [shouldShowGazeError, showGazeError] = React.useState(false)
   // Scene Video Data
   const [videoFile, setVideoFile] = React.useState<File | null>(null)
+  // Calibration Config Data
+  const [configFile, setConfigFile] = React.useState<File | null>(null)
 
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -192,9 +194,25 @@ function App() {
             containing 'gaze.csv'.
           </Toast.Description>
         </Toast.Root>
+
+        <Label className="text-sm" htmlFor="calibration-file-upload">
+          {' '}
+          Neon XR Calibration File (config.json){' '}
+        </Label>
+        <Input
+          id="calibration-file-upload"
+          type="file"
+          className="text-muted-foreground"
+          onChange={(e) => {
+            const file = e.target.files?.[0]
+            if (file) {
+              setConfigFile(file);
+            }
+          }}
+        />
         <Separator className="mt-4 mb-2" />
         <Label className="text-md font-bold mb-2"> Align </Label>
-        <Button onClick={setCurrentTimeAsGazeStart} disabled={!videoFile || !gazeFile}>
+        <Button onClick={setCurrentTimeAsGazeStart} disabled={!videoFile || !gazeFile || !configFile}>
           Set Current Time as Gaze Start Time
         </Button>
         <Label className="text-sm" htmlFor="gaze-start-time">
@@ -208,7 +226,7 @@ function App() {
             size="icon"
             title="Shift gaze start to previous frame"
             onClick={() => shiftGazeStartByFrame(-1)}
-            disabled={!videoFile || !gazeFile}
+            disabled={!videoFile || !gazeFile || !configFile}
           >
             <SkipBackIcon />
           </Button>
@@ -227,7 +245,7 @@ function App() {
             id="s-gst"
             type="number"
             placeholder="sec"
-            disabled={!videoFile || !gazeFile}
+            disabled={!videoFile || !gazeFile || !configFile}
             min={0}
             max={59}
             onChange={recomputeGazeStartMs}
@@ -238,7 +256,7 @@ function App() {
             id="ms-gst"
             type="number"
             placeholder="ms"
-            disabled={!videoFile || !gazeFile}
+            disabled={!videoFile || !gazeFile || !configFile}
             min={0}
             max={999}
             onChange={recomputeGazeStartMs}
@@ -250,7 +268,7 @@ function App() {
             size="icon"
             title="Shift gaze start to next frame"
             onClick={() => shiftGazeStartByFrame(1)}
-            disabled={!videoFile || !gazeFile}
+            disabled={!videoFile || !gazeFile || !configFile}
           >
             <SkipForwardIcon />
           </Button>
@@ -260,31 +278,34 @@ function App() {
           {' '}
           Gaze Visualizer Style{' '}
         </Label>
-        <Label className="text-sm" htmlFor="xr-file-upload">
+        <Label className="text-sm" htmlFor='gaze-radius'>
           {' '}
           Radius{' '}
         </Label>
         <SliderNumberInput
+          id='gaze-radius'
           value={radius}
           onValueChange={setRadius}
           min={1}
           max={100}
         />
-        <Label className="text-sm" htmlFor="xr-file-upload">
+        <Label className="text-sm" htmlFor='gaze-stroke'>
           {' '}
           Stroke Width{' '}
         </Label>
         <SliderNumberInput
+          id='gaze-stroke'
           value={stroke}
           onValueChange={setStroke}
           min={1}
           max={100}
         />
-        <Label className="text-sm" htmlFor="xr-file-upload">
+        <Label className="text-sm" htmlFor='gaze-color'>
           {' '}
           Color{' '}
         </Label>
         <ColorPicker
+          id='gaze-color'
           defaultValue={color}
           color={color}
           onChange={(v) => {
