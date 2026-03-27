@@ -13,7 +13,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 
-import { Projector, buildProjector, VideoParams } from '@/lib/gaze-projection';
+import { Projector, buildProjector, VideoParams, GazeProjectionResult, projectGazeSample } from '@/lib/gaze-projection';
 
 interface CircleConfig {
   stroke: number;
@@ -124,9 +124,9 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         const gazeData = gazeDataRef.current;
         const gazeStart = gazeStartRef.current;
 
-        const drawNoGaze = () => {
+        const drawNoGaze = (message?: string | undefined) => {
           const padding = 10;
-          const text = 'No gaze yet';
+          const text = message || 'No gaze yet';
           context.save();
           context.font = '12px system-ui, -apple-system, Segoe UI, sans-serif';
           const metrics = context.measureText(text);
@@ -170,19 +170,40 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         }
         gazeIndexRef.current = i;
 
-        const point = gazeData[i];
-        const { width, height } = gazeSourceSizeRef.current;
-        const scaleX = width > 0 ? canvas.width / width : 1;
-        const scaleY = height > 0 ? canvas.height / height : 1;
-        const scaledX = point.gazeX * scaleX;
-        const scaledY = point.gazeY * scaleY;
-        const currentConfig = circleConfigRef.current;
+        if (gazeProjectorRef.current === null) {
+          context.clearRect(0, 0, canvas.width, canvas.height);
+          drawNoGaze("Gaze projector not ready");
+          return;
+        }
 
+        // Gaze Data Point Handling
+        // TODO: insert projection in this section - currently using raw gazeX/gazeY for visualization, but should project azimuth/elevation to video frame coordinates using gazeProjectorRef and projectGazeSample()
+        const point = gazeData[i];
+        // const { width, height } = gazeSourceSizeRef.current;
+        // const scaleX = width > 0 ? canvas.width / width : 1;
+        // const scaleY = height > 0 ? canvas.height / height : 1;
+        // const scaledX = point.gazeX * scaleX;
+        // const scaledY = point.gazeY * scaleY;
+        console.log(`projecting point with azimuth=${point.azimuthDeg}°, elevation=${point.elevationDeg}°`);
+        const projectedPoint = projectGazeSample(
+          gazeProjectorRef.current!,
+          point.azimuthDeg, point.elevationDeg
+        );
+        const circleConfig = circleConfigRef.current;
+
+        if (!projectedPoint.valid || projectedPoint.x === null || projectedPoint.y === null) {
+          context.clearRect(0, 0, canvas.width, canvas.height);
+          drawNoGaze("Invalid projected gaze point");
+          return;
+        }
+
+        console.log('Projected gaze point:', projectedPoint);
+        // Drawing the Gaze circle around the point
         context.clearRect(0, 0, canvas.width, canvas.height);
         context.beginPath();
-        context.arc(scaledX, scaledY, currentConfig.radius, 0, 2 * Math.PI);
-        context.strokeStyle = currentConfig.color;
-        context.lineWidth = currentConfig.stroke;
+        context.arc(projectedPoint.x, projectedPoint.y, circleConfig.radius, 0, 2 * Math.PI);
+        context.strokeStyle = circleConfig.color;
+        context.lineWidth = circleConfig.stroke;
         context.stroke();
       },
     },

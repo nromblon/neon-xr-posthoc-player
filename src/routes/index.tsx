@@ -311,7 +311,6 @@ function App() {
           color={color}
           onChange={(v) => {
             const c = Color(v)
-            console.log(c.hexa())
             setColor(c.hexa())
           }}
           className="max-w-sm h-70 rounded-md border bg-background p-4 shadow-sm"

@@ -148,13 +148,16 @@ function rotateRayToQuestSpace(rayScene: vec3, mountQuat: quat): vec3 {
 function projectRayToFrame(rayQuest: vec3, K: CameraIntrinsics): GazeProjectionResult {
   // Ray must be facing forward (positive Z) to land on screen
   if (rayQuest[2] <= 0) {
+    console.warn(`Gaze ray points away from camera (Z=${rayQuest[2]}), skipping projection`);
     return { x: null, y: null, valid: false };
   }
 
+  console.log(`Ray in Quest space: x=${rayQuest[0].toFixed(4)}, y=${rayQuest[1].toFixed(4)}, z=${rayQuest[2].toFixed(4)}`);
   // Perspective divide, then apply intrinsics
   const xNorm = rayQuest[0] / rayQuest[2];
   const yNorm = rayQuest[1] / rayQuest[2];
 
+  console.log(`Normalized gaze ray: x=${xNorm.toFixed(4)}, y=${yNorm.toFixed(4)}, z=${rayQuest[2].toFixed(4)}`);
   return {
     x: K.fx * xNorm + K.cx,
     y: K.fy * yNorm + K.cy,
@@ -229,27 +232,11 @@ export function projectGazeCSV(
     const worn = row.worn !== undefined ? parseFloat(String(row.worn)) : 1;
 
     if (worn === 0 || isNaN(az) || isNaN(el)) {
+      console.warn(`Skipping invalid gaze sample at timestamp ${timestamp_ns}: worn=${worn}, az=${row['azimuth [deg]']}, el=${row['elevation [deg]']}`);  
       return { timestamp_ns, x: null, y: null, valid: false };
     }
 
     const { x, y, valid } = projectGazeSample(projector, az, el);
     return { timestamp_ns, x, y, valid };
   });
-}
-
-export function readConfigJson(configContent: string): NeonXRConfig {
-    try {
-        const config = JSON.parse(configContent);
-        // Basic validation of required fields
-        if (
-            !config.sensorCalibration ||
-            !config.sensorCalibration.offset ||
-            !config.sensorCalibration.offset.rotation
-        ) {
-            throw new Error('Invalid config.json: missing sensorCalibration.offset.rotation');
-        }
-        return config as NeonXRConfig;
-    } catch (error) {
-        throw new Error(`Failed to parse config.json: ${error instanceof Error ? error.message : String(error)}`);
-    }
 }
