@@ -108,11 +108,12 @@ function App() {
         id="video-div"
         className="flex items-center justify-center h-full flex-1"
       >
-        {gazeFile && videoFile ? (
+        {gazeFile && videoFile && configFile ? (
           <VideoPlayer 
             videoRef={videoRef}
             gazeDataFile={gazeFile} 
             videoFile={videoFile} 
+            xrConfigFile={configFile}
             circleConfig={{ stroke, radius, color }} 
             gazeStartMs={gazeStartMs}
             onFrameDurationChange={(frameDurationSeconds) => {

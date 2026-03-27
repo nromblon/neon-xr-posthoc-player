@@ -13,6 +13,8 @@ import React, { useEffect, useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 
+import { Projector, buildProjector, VideoParams } from '@/lib/gaze-projection';
+
 interface CircleConfig {
   stroke: number;
   radius: number;
@@ -23,6 +25,7 @@ interface VideoPlayerProps {
   gazeDataFile: File;
   videoRef: React.RefObject<HTMLVideoElement | null>;
   videoFile: File;
+  xrConfigFile: File;
   circleConfig: CircleConfig;
   gazeStartMs: number;
   onFrameDurationChange?: (frameDurationSeconds: number) => void;
@@ -83,6 +86,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   gazeDataFile,
   videoRef,
   videoFile,
+  xrConfigFile,
   circleConfig = defaultCircleConfig,
   gazeStartMs,
   onFrameDurationChange,
@@ -92,6 +96,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const layerCanvasRefs = useRef<Record<string, HTMLCanvasElement | null>>({});
   const gazeDataRef = useRef<Array<GazeDataPoint>>([]);
   const gazeStartRef = useRef<number | null>(null);
+  const gazeProjectorRef = useRef<Projector | null>(null);
   const gazeIndexRef = useRef(0);
   const gazeSourceSizeRef = useRef({ width: 1600, height: 1200 });
   const circleConfigRef = useRef(circleConfig);
@@ -285,12 +290,44 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     };
   }, [videoFile]);
 
+  // On Gaze Setup Change: rebuild projector with new config and redraw
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    // Build Gaze Projector
+    gazeProjectorRef.current = null;
+    
+    const loadConfig = async () => {
+      try {
+        const videoParams : VideoParams = {
+          videoWidth: video.videoWidth || 1600,
+          videoHeight: video.videoHeight || 1200,
+          fovHorizontalDeg: 90, // Assuming a default FOV; ideally this should come from the config or be user-specified
+        };
+
+        const text = await xrConfigFile.text();
+        const config = JSON.parse(text);
+        const projector = buildProjector(config, videoParams);
+        gazeProjectorRef.current = projector;
+
+        console.log('Gaze projector built with config:', config, 'and video params:', videoParams);
+
+      } catch (error) {
+        console.error('Failed to load or parse XR config file:', error);
+      }
+    };
+
+    loadConfig();
+  }, [gazeDataFile, videoRef.current, xrConfigFile]);
+
   // On Enabled Layers Change: redraw with new layer visibility
   useEffect(() => {
     enabledLayersRef.current = enabledLayers;
     drawFrameRef.current?.();
   }, [enabledLayers]);
 
+  // Component Initialization: handle fullscreen change events to update state
   useEffect(() => {
     const handleFullscreenChange = () => {
       setIsFullscreen(document.fullscreenElement === containerRef.current);
