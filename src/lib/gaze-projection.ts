@@ -236,3 +236,20 @@ export function projectGazeCSV(
     return { timestamp_ns, x, y, valid };
   });
 }
+
+export function readConfigJson(configContent: string): NeonXRConfig {
+    try {
+        const config = JSON.parse(configContent);
+        // Basic validation of required fields
+        if (
+            !config.sensorCalibration ||
+            !config.sensorCalibration.offset ||
+            !config.sensorCalibration.offset.rotation
+        ) {
+            throw new Error('Invalid config.json: missing sensorCalibration.offset.rotation');
+        }
+        return config as NeonXRConfig;
+    } catch (error) {
+        throw new Error(`Failed to parse config.json: ${error instanceof Error ? error.message : String(error)}`);
+    }
+}
