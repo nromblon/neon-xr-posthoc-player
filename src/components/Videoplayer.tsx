@@ -190,17 +190,20 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     }
   };
 
+  // On Gaze Circle Config Change: update ref and redraw
   useEffect(() => {
     circleConfigRef.current = circleConfig;
     drawFrameRef.current?.();
   }, [circleConfig]);
 
+  // On Gaze Data or Start Time Change: reset gaze index and redraw
   useEffect(() => {
     gazeStartMsRef.current = gazeStartMs;
     gazeIndexRef.current = 0;
     drawFrameRef.current?.();
   }, [gazeStartMs]);
 
+  // On Gaze Data File Change: load and parse new gaze data
   useEffect(() => {
     const loadGazeData = async () => {
       const text = await gazeDataFile.text();
@@ -271,6 +274,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     loadGazeData();
   }, [gazeDataFile]);
 
+  // On Video File Change: reset video src and redraw
   useEffect(() => {
     const url = URL.createObjectURL(videoFile);
     if (videoRef.current) {
@@ -281,6 +285,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     };
   }, [videoFile]);
 
+  // On Enabled Layers Change: redraw with new layer visibility
   useEffect(() => {
     enabledLayersRef.current = enabledLayers;
     drawFrameRef.current?.();
@@ -301,6 +306,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     };
   }, []);
 
+  // Main Video Event Loop: handle play/pause, time updates, seeking, volume changes, and frame rendering
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
