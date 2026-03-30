@@ -255,75 +255,73 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   useEffect(() => {
     const loadGazeData = async () => {
       const text = await gazeDataFile.text();
-      const lines = text
-        .split('\n')
-        .map((line) => line.trim())
-        .filter(Boolean);
-      const dataLines =
-        lines[0]?.toLowerCase().includes('section id') ? lines.slice(1) : lines;
+      const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+      if (lines.length < 2) return;
+
+      // Parse header to build a column index map
+      const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+      const col = (name: string) => headers.indexOf(name);
+
+      const idxTimestamp  = col('timestamp [ns]');
+      const idxGazeX      = col('gaze x [px]');
+      const idxGazeY      = col('gaze y [px]');
+      const idxWorn       = col('worn');
+      const idxFixation   = col('fixation id');
+      const idxBlink      = col('blink id');
+      const idxAzimuth    = col('azimuth [deg]');
+      const idxElevation  = col('elevation [deg]');
+      const idxSectionId  = col('section id');
+      const idxRecording  = col('recording id');
+
+      // Warn if critical columns are missing
+      if (idxTimestamp === -1 || idxAzimuth === -1 || idxElevation === -1) {
+        console.error('gaze.csv missing required columns. Found headers:', headers);
+        return;
+      }
+
       const parseOptionalNumber = (value: string) => {
-        if (value === '') return null;
-        const parsed = Number(value);
-        return Number.isFinite(parsed) ? parsed : null;
+        if (!value) return null;
+        const n = Number(value);
+        return Number.isFinite(n) ? n : null;
       };
-      const gazeData = dataLines
-        .map((line) => {
-          const cols = line.split(',').map((col) => col.trim());
-          if (cols.length < 10) return null;
-          const [
-            sectionId,
-            recordingId,
-            timestampNs,
-            gazeX,
-            gazeY,
-            gazeMonoLeftX,
-            gazeMonoLeftY,
-            gazemonoRightX,
-            gazemonoRightY,
-            worn,
-            fixationId,
-            blinkId,
-            azimuthDeg,
-            elevationDeg,
-          ] = cols;
-          const parsedTimestamp = Number(timestampNs);
-          const parsedGazeX = Number(gazeX);
-          const parsedGazeY = Number(gazeY);
-          const parsedAzimuth = Number(azimuthDeg);
-          const parsedElevation = Number(elevationDeg);
-          if (
-            !Number.isFinite(parsedTimestamp) ||
-            !Number.isFinite(parsedGazeX) ||
-            !Number.isFinite(parsedGazeY) ||
-            !Number.isFinite(parsedAzimuth) ||
-            !Number.isFinite(parsedElevation)
-          ) {
-            return null;
-          }
-          return {
-            sectionId,
-            recordingId,
-            timestampNs: parsedTimestamp,
-            gazeX: parsedGazeX,
-            gazeY: parsedGazeY,
-            worn,
-            fixationId: parseOptionalNumber(fixationId),
-            blinkId: parseOptionalNumber(blinkId),
-            azimuthDeg: parsedAzimuth,
-            elevationDeg: parsedElevation,
-          };
-        })
-        .filter((point): point is GazeDataPoint => !!point);
-      
+
+      const gazeData = lines.slice(1).map(line => {
+        const cols = line.split(',').map(c => c.trim());
+
+        const timestampNs  = Number(cols[idxTimestamp]);
+        const gazeX        = Number(cols[idxGazeX]);
+        const gazeY        = Number(cols[idxGazeY]);
+        const azimuthDeg   = Number(cols[idxAzimuth]);
+        const elevationDeg = Number(cols[idxElevation]);
+
+        if (
+          !Number.isFinite(timestampNs) ||
+          !Number.isFinite(azimuthDeg)  ||
+          !Number.isFinite(elevationDeg)
+        ) return null;
+
+        return {
+          sectionId:   cols[idxSectionId] ?? '',
+          recordingId: cols[idxRecording] ?? '',
+          timestampNs,
+          gazeX,
+          gazeY,
+          worn:        cols[idxWorn] ?? '1',
+          fixationId:  parseOptionalNumber(cols[idxFixation]),
+          blinkId:     parseOptionalNumber(cols[idxBlink]),
+          azimuthDeg,
+          elevationDeg,
+        };
+      }).filter((p): p is GazeDataPoint => p !== null);
+
       gazeData.sort((a, b) => a.timestampNs - b.timestampNs);
       gazeDataRef.current = gazeData;
       gazeStartRef.current = gazeData[0]?.timestampNs ?? null;
       gazeIndexRef.current = 0;
-      gazeSourceSizeRef.current = { width: 1600, height: 1200 };
       drawFrameRef.current?.();
     };
 
-    loadGazeData();
+    void loadGazeData();
   }, [gazeDataFile]);
 
   // On Video File Change: reset video src and redraw
