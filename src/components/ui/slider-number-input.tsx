@@ -40,6 +40,7 @@ export function SliderNumberInput({
           max={max}
           step={step}
           value={[value]}
+          title='Lower if there is centre-pull'
           onValueChange={(v) => onValueChange(clamp(v[0]))}
         />
 

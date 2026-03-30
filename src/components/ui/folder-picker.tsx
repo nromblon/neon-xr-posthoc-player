@@ -55,7 +55,9 @@ export function FolderPicker({
 
       <InputGroup onClick={() => inputRef.current?.click()}>
         <InputGroupAddon align="inline-start">
-          <span className="text-foreground"> {buttonLabel} </span>
+          <span className="text-foreground inline-flex w-23 shrink-0 justify-center whitespace-nowrap">
+            {buttonLabel}
+          </span>
         </InputGroupAddon>
         <div className="flex flex-1 items-center px-1 text-sm font-normal text-muted-foreground">
           <span className="truncate">{label}</span>
