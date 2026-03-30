@@ -184,7 +184,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         // const scaleY = height > 0 ? canvas.height / height : 1;
         // const scaledX = point.gazeX * scaleX;
         // const scaledY = point.gazeY * scaleY;
-        console.log(`projecting point with azimuth=${point.azimuthDeg}°, elevation=${point.elevationDeg}°`);
         const projectedPoint = projectGazeSample(
           gazeProjectorRef.current!,
           point.azimuthDeg, point.elevationDeg
@@ -197,7 +196,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
           return;
         }
 
-        console.log('Projected gaze point:', projectedPoint);
         // Drawing the Gaze circle around the point
         context.clearRect(0, 0, canvas.width, canvas.height);
         context.beginPath();
@@ -311,36 +309,72 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     };
   }, [videoFile]);
 
-  // On Gaze Setup Change: rebuild projector with new config and redraw
+  // // On Gaze Setup Change: rebuild projector with new config and redraw
+  // useEffect(() => {
+  //   const video = videoRef.current;
+  //   if (!video) return;
+
+  //   // Build Gaze Projector
+  //   gazeProjectorRef.current = null;
+    
+  //   const loadConfig = async () => {
+  //     try {
+  //       const videoParams : VideoParams = {
+  //         videoWidth: video.videoWidth || 1600,
+  //         videoHeight: video.videoHeight || 1200,
+  //         fovHorizontalDeg: 90, // Assuming a default FOV; ideally this should come from the config or be user-specified
+  //       };
+
+  //       const text = await xrConfigFile.text();
+  //       const config = JSON.parse(text);
+  //       const projector = buildProjector(config, videoParams);
+  //       gazeProjectorRef.current = projector;
+
+  //       console.log('Gaze projector built with config:', config, 'and video params:', videoParams);
+
+  //     } catch (error) {
+  //       console.error('Failed to load or parse XR config file:', error);
+  //     }
+  //   };
+
+  //   loadConfig();
+  // }, [xrConfigFile]);
+
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
 
-    // Build Gaze Projector
     gazeProjectorRef.current = null;
-    
-    const loadConfig = async () => {
-      try {
-        const videoParams : VideoParams = {
-          videoWidth: video.videoWidth || 1600,
-          videoHeight: video.videoHeight || 1200,
-          fovHorizontalDeg: 90, // Assuming a default FOV; ideally this should come from the config or be user-specified
-        };
 
+    const buildFromVideo = async () => {
+      if (!video.videoWidth || !video.videoHeight) return; // guard: metadata not ready
+
+      try {
         const text = await xrConfigFile.text();
         const config = JSON.parse(text);
-        const projector = buildProjector(config, videoParams);
+
+        const projector = buildProjector(config, {
+          videoWidth: video.videoWidth,
+          videoHeight: video.videoHeight,
+          fovHorizontalDeg: 90,
+        });
         gazeProjectorRef.current = projector;
-
-        console.log('Gaze projector built with config:', config, 'and video params:', videoParams);
-
-      } catch (error) {
-        console.error('Failed to load or parse XR config file:', error);
+        drawFrameRef.current?.();
+      } catch (e) {
+        console.error('Failed to build projector:', e);
       }
     };
 
-    loadConfig();
-  }, [gazeDataFile, videoRef.current, xrConfigFile]);
+    // If metadata already loaded (e.g. file was already set), build immediately
+    if (video.videoWidth && video.videoHeight) {
+      void buildFromVideo();
+    }
+
+    // Otherwise wait for it
+    video.addEventListener('loadedmetadata', buildFromVideo);
+    return () => video.removeEventListener('loadedmetadata', buildFromVideo);
+
+  }, [xrConfigFile]); // only xrConfigFile — video dimensions come from the event
 
   // On Enabled Layers Change: redraw with new layer visibility
   useEffect(() => {

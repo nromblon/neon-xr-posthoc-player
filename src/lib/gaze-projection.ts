@@ -18,10 +18,10 @@ import { quat, vec3 } from 'gl-matrix';
 
 /** Rotation quaternion as stored in config.json (Unity convention: x, y, z, w) */
 export interface MountRotation {
-  x: number;
-  y: number;
-  z: number;
-  w: number;
+  x: number; // pitch (degrees)
+  y: number; // yaw (degrees)
+  z: number; // roll (degrees)
+  // no w — this is Euler angles, not a quaternion
 }
 
 /** Minimal shape of config.json relevant to gaze projection */
@@ -152,12 +152,10 @@ function projectRayToFrame(rayQuest: vec3, K: CameraIntrinsics): GazeProjectionR
     return { x: null, y: null, valid: false };
   }
 
-  console.log(`Ray in Quest space: x=${rayQuest[0].toFixed(4)}, y=${rayQuest[1].toFixed(4)}, z=${rayQuest[2].toFixed(4)}`);
   // Perspective divide, then apply intrinsics
   const xNorm = rayQuest[0] / rayQuest[2];
   const yNorm = rayQuest[1] / rayQuest[2];
 
-  console.log(`Normalized gaze ray: x=${xNorm.toFixed(4)}, y=${yNorm.toFixed(4)}, z=${rayQuest[2].toFixed(4)}`);
   return {
     x: K.fx * xNorm + K.cx,
     y: K.fy * yNorm + K.cy,
@@ -180,14 +178,18 @@ function projectRayToFrame(rayQuest: vec3, K: CameraIntrinsics): GazeProjectionR
 export function buildProjector(configJson: NeonXRConfig, videoParams: VideoParams): Projector {
   const { videoWidth, videoHeight, fovHorizontalDeg } = videoParams;
 
-  // Mount calibration quaternion — Unity stores as { x, y, z, w }
-  // gl-matrix quat.fromValues also takes (x, y, z, w), so no reordering needed
   const r = configJson.sensorCalibration.offset.rotation;
-  const mountQuat = quat.fromValues(r.x, r.y, r.z, r.w);
 
-  // Pinhole camera intrinsics derived from resolution and FOV
+  // config.json stores rotation as Euler angles in degrees (x=pitch, y=yaw, z=roll)
+  // Unity's default Euler order is ZXY (applied as: roll first, then pitch, then yaw)
+  const mountQuat = quat.create();
+  quat.fromEuler(mountQuat, r.x, r.y, r.z);
+  // quat.fromEuler expects (out, x_deg, y_deg, z_deg) and uses ZXY order internally
+  // If ZXY (default Unity) doesn't look right, try:
+  // quat.fromEuler(mountQuat, r.y, r.x, r.z); // swap pitch/yaw if off
+
   const fx = (videoWidth / 2) / Math.tan(toRad(fovHorizontalDeg) / 2);
-  const fy = fx; // square pixels in Quest recording output
+  const fy = fx;
   const cx = videoWidth / 2;
   const cy = videoHeight / 2;
 
