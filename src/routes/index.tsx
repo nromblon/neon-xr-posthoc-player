@@ -18,7 +18,13 @@ import {
 } from '@/components/ui/shadcn-io/color-picker'
 import { SliderNumberInput } from '@/components/ui/slider-number-input'
 import VideoPlayer from '@/components/Videoplayer'
-import { Empty,  EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '@/components/ui/empty'
 import { Button } from '@/components/ui/button'
 
 export const Route = createFileRoute('/')({ component: App })
@@ -42,13 +48,13 @@ function App() {
   // Calibration Config Data
   const [configFile, setConfigFile] = React.useState<File | null>(null)
 
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null)
 
   // Align-related state
-  const [gazeStartMs, setGazeStartMs] = React.useState<number>(0);
+  const [gazeStartMs, setGazeStartMs] = React.useState<number>(0)
   const [frameDurationMs, setFrameDurationMs] = React.useState<number>(
     DEFAULT_FRAME_DURATION_MS,
-  );
+  )
 
   const findGazeFile = (file: FileList) => {
     for (let i = 0; i < file.length; i++) {
@@ -95,7 +101,7 @@ function App() {
     const seconds = parseInt(secInput.value) || 0
     const milliseconds = parseInt(msInput.value) || 0
     const totalMs = minutes * 60 * 1000 + seconds * 1000 + milliseconds
-    setGazeStartMs(totalMs);
+    setGazeStartMs(totalMs)
   }
 
   const shiftGazeStartByFrame = (direction: 1 | -1) => {
@@ -109,12 +115,12 @@ function App() {
         className="flex items-center justify-center h-full flex-1"
       >
         {gazeFile && videoFile && configFile ? (
-          <VideoPlayer 
+          <VideoPlayer
             videoRef={videoRef}
-            gazeDataFile={gazeFile} 
-            videoFile={videoFile} 
+            gazeDataFile={gazeFile}
+            videoFile={videoFile}
             xrConfigFile={configFile}
-            circleConfig={{ stroke, radius, color }} 
+            circleConfig={{ stroke, radius, color }}
             gazeStartMs={gazeStartMs}
             onFrameDurationChange={(frameDurationSeconds) => {
               if (frameDurationSeconds > 0) {
@@ -122,17 +128,19 @@ function App() {
               }
             }}
           />
-        ) : 
+        ) : (
           <Empty>
             <EmptyHeader>
               <EmptyMedia variant="icon">
                 <BookXIcon />
               </EmptyMedia>
               <EmptyTitle>No data</EmptyTitle>
-              <EmptyDescription>Choose XR Video and Gaze Data Folder</EmptyDescription>
+              <EmptyDescription>
+                Choose XR Video and Gaze Data Folder
+              </EmptyDescription>
             </EmptyHeader>
           </Empty>
-      }
+        )}
       </div>
       <div
         id="settings-div"
@@ -150,7 +158,7 @@ function App() {
           onChange={(e) => {
             const file = e.target.files?.[0]
             if (file) {
-              setVideoFile(file);
+              setVideoFile(file)
             }
           }}
         />
@@ -163,18 +171,18 @@ function App() {
           inputRef={folderPickerRef}
           onPick={(f) => {
             console.log(f)
-            const gf = findGazeFile(f);
+            const gf = findGazeFile(f)
             if (gf) {
-              setGazeFile(gf);
-            } 
-            
-            console.log(gf);
+              setGazeFile(gf)
+            }
+
+            console.log(gf)
             if (!gf || f.length === 0) {
-              setGazeFile(null);
-              showGazeError(true);
+              setGazeFile(null)
+              showGazeError(true)
               setFolderPickerKey((k) => k + 1)
               if (folderPickerRef.current) {
-                folderPickerRef.current.value = '';
+                folderPickerRef.current.value = ''
               }
               // alert('Unable to find valid gaze data file. Please select a folder containing "gaze.csv".')
               // console.log('missing gaze file')
@@ -207,13 +215,16 @@ function App() {
           onChange={(e) => {
             const file = e.target.files?.[0]
             if (file) {
-              setConfigFile(file);
+              setConfigFile(file)
             }
           }}
         />
         <Separator className="mt-4 mb-2" />
         <Label className="text-md font-bold mb-2"> Align </Label>
-        <Button onClick={setCurrentTimeAsGazeStart} disabled={!videoFile || !gazeFile || !configFile}>
+        <Button
+          onClick={setCurrentTimeAsGazeStart}
+          disabled={!videoFile || !gazeFile || !configFile}
+        >
           Set Current Time as Gaze Start Time
         </Button>
         <Label className="text-sm" htmlFor="gaze-start-time">
@@ -279,34 +290,34 @@ function App() {
           {' '}
           Gaze Visualizer Style{' '}
         </Label>
-        <Label className="text-sm" htmlFor='gaze-radius'>
+        <Label className="text-sm" htmlFor="gaze-radius">
           {' '}
           Radius{' '}
         </Label>
         <SliderNumberInput
-          id='gaze-radius'
+          id="gaze-radius"
           value={radius}
           onValueChange={setRadius}
           min={1}
           max={100}
         />
-        <Label className="text-sm" htmlFor='gaze-stroke'>
+        <Label className="text-sm" htmlFor="gaze-stroke">
           {' '}
           Stroke Width{' '}
         </Label>
         <SliderNumberInput
-          id='gaze-stroke'
+          id="gaze-stroke"
           value={stroke}
           onValueChange={setStroke}
           min={1}
           max={100}
         />
-        <Label className="text-sm" htmlFor='gaze-color'>
+        <Label className="text-sm" htmlFor="gaze-color">
           {' '}
           Color{' '}
         </Label>
         <ColorPicker
-          id='gaze-color'
+          id="gaze-color"
           defaultValue={color}
           color={color}
           onChange={(v) => {

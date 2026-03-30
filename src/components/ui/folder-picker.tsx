@@ -19,7 +19,6 @@ export function FolderPicker({
   className,
   inputRef,
 }: FolderInputProps) {
-
   if (inputRef === undefined) {
     inputRef = React.useRef<HTMLInputElement>(null)
   }

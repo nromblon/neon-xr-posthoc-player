@@ -10,7 +10,7 @@
  *   npm install --save-dev @types/gl-matrix  (if needed — gl-matrix 3.x ships its own types)
  */
 
-import { quat, vec3 } from 'gl-matrix';
+import { quat, vec3 } from 'gl-matrix'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -18,9 +18,9 @@ import { quat, vec3 } from 'gl-matrix';
 
 /** Rotation quaternion as stored in config.json (Unity convention: x, y, z, w) */
 export interface MountRotation {
-  x: number; // pitch (degrees)
-  y: number; // yaw (degrees)
-  z: number; // roll (degrees)
+  x: number // pitch (degrees)
+  y: number // yaw (degrees)
+  z: number // roll (degrees)
   // no w — this is Euler angles, not a quaternion
 }
 
@@ -28,27 +28,27 @@ export interface MountRotation {
 export interface NeonXRConfig {
   sensorCalibration: {
     offset: {
-      rotation: MountRotation;
+      rotation: MountRotation
       /** Position in metres relative to Quest origin — not used for ray projection */
-      position: { x: number; y: number; z: number };
-    };
-  };
+      position: { x: number; y: number; z: number }
+    }
+  }
 }
 
 /** Pinhole camera intrinsics for the Quest 3 recording */
 export interface CameraIntrinsics {
-  fx: number;
-  fy: number;
-  cx: number;
-  cy: number;
+  fx: number
+  fy: number
+  cx: number
+  cy: number
 }
 
 /** Parameters describing the Quest 3 video recording */
 export interface VideoParams {
   /** Recording width in pixels */
-  videoWidth: number;
+  videoWidth: number
   /** Recording height in pixels */
-  videoHeight: number;
+  videoHeight: number
   /**
    * Horizontal FOV of the recording in degrees.
    *
@@ -60,50 +60,50 @@ export interface VideoParams {
    * record it, measure its pixel x position, then solve:
    *   fx = (pixel_x - cx) / Math.tan(toRad(knownAngleDeg))
    */
-  fovHorizontalDeg: number;
+  fovHorizontalDeg: number
 }
 
 /** A built projector — construct once, reuse for all samples in a recording */
 export interface Projector {
-  mountQuat: quat;
-  K: CameraIntrinsics;
-  videoWidth: number;
-  videoHeight: number;
+  mountQuat: quat
+  K: CameraIntrinsics
+  videoWidth: number
+  videoHeight: number
 }
 
 /** Result of projecting a single gaze sample */
 export interface GazeProjectionResult {
   /** Pixel x coordinate in the video frame, or null if invalid */
-  x: number | null;
+  x: number | null
   /** Pixel y coordinate in the video frame, or null if invalid */
-  y: number | null;
+  y: number | null
   /**
    * False when the gaze ray points away from the camera (outside FOV, blink)
    * or the input sample was flagged as not worn.
    */
-  valid: boolean;
+  valid: boolean
 }
 
 /** A single row from gaze.csv with the fields this module uses */
 export interface GazeCSVRow {
-  'timestamp [ns]': number | string;
-  'azimuth [deg]': number | string;
-  'elevation [deg]': number | string;
+  'timestamp [ns]': number | string
+  'azimuth [deg]': number | string
+  'elevation [deg]': number | string
   /** 1.0 = worn, 0.0 = not worn */
-  worn?: number | string;
-  [key: string]: unknown;
+  worn?: number | string
+  [key: string]: unknown
 }
 
 /** Projected result with its original timestamp preserved */
 export interface ProjectedGazeSample extends GazeProjectionResult {
-  timestamp_ns: number;
+  timestamp_ns: number
 }
 
 // ---------------------------------------------------------------------------
 // Internal helpers
 // ---------------------------------------------------------------------------
 
-const toRad = (deg: number): number => (deg * Math.PI) / 180;
+const toRad = (deg: number): number => (deg * Math.PI) / 180
 
 /**
  * Convert Neon's azimuth/elevation (degrees, scene-camera convention) to a
@@ -116,14 +116,14 @@ const toRad = (deg: number): number => (deg * Math.PI) / 180;
  */
 function azElToRayScene(azimuthDeg: number, elevationDeg: number): vec3 {
   // Convert to standard spherical coordinates
-  const elRad = toRad(elevationDeg) + Math.PI / 2; // elevation=0 → equator
-  const azRad = -toRad(azimuthDeg) + Math.PI / 2;  // flip azimuth convention
+  const elRad = toRad(elevationDeg) + Math.PI / 2 // elevation=0 → equator
+  const azRad = -toRad(azimuthDeg) + Math.PI / 2 // flip azimuth convention
 
-  const x = Math.sin(elRad) * Math.cos(azRad);
-  const y = Math.cos(elRad);
-  const z = Math.sin(elRad) * Math.sin(azRad);
+  const x = Math.sin(elRad) * Math.cos(azRad)
+  const y = Math.cos(elRad)
+  const z = Math.sin(elRad) * Math.sin(azRad)
 
-  return vec3.fromValues(x, y, z);
+  return vec3.fromValues(x, y, z)
 }
 
 /**
@@ -133,9 +133,9 @@ function azElToRayScene(azimuthDeg: number, elevationDeg: number): vec3 {
  * Only rotation is applied — translation is irrelevant for ray directions.
  */
 function rotateRayToQuestSpace(rayScene: vec3, mountQuat: quat): vec3 {
-  const out = vec3.create();
-  vec3.transformQuat(out, rayScene, mountQuat);
-  return out;
+  const out = vec3.create()
+  vec3.transformQuat(out, rayScene, mountQuat)
+  return out
 }
 
 /**
@@ -145,22 +145,27 @@ function rotateRayToQuestSpace(rayScene: vec3, mountQuat: quat): vec3 {
  * Valid only for rectilinear recordings (in-headset, MQDH Cropped/Cinematic).
  * Do NOT use with MQDH Original — that output is not rectilinear.
  */
-function projectRayToFrame(rayQuest: vec3, K: CameraIntrinsics): GazeProjectionResult {
+function projectRayToFrame(
+  rayQuest: vec3,
+  K: CameraIntrinsics,
+): GazeProjectionResult {
   // Ray must be facing forward (positive Z) to land on screen
   if (rayQuest[2] <= 0) {
-    console.warn(`Gaze ray points away from camera (Z=${rayQuest[2]}), skipping projection`);
-    return { x: null, y: null, valid: false };
+    console.warn(
+      `Gaze ray points away from camera (Z=${rayQuest[2]}), skipping projection`,
+    )
+    return { x: null, y: null, valid: false }
   }
 
   // Perspective divide, then apply intrinsics
-  const xNorm = rayQuest[0] / rayQuest[2];
-  const yNorm = rayQuest[1] / rayQuest[2];
+  const xNorm = rayQuest[0] / rayQuest[2]
+  const yNorm = rayQuest[1] / rayQuest[2]
 
   return {
     x: K.fx * xNorm + K.cx,
     y: K.fy * yNorm + K.cy,
     valid: true,
-  };
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -175,25 +180,28 @@ function projectRayToFrame(rayQuest: vec3, K: CameraIntrinsics): GazeProjectionR
  *   persistent data path. Load it however suits your app (fetch, FileReader, etc.)
  * @param videoParams - resolution and FOV of your Quest 3 recording
  */
-export function buildProjector(configJson: NeonXRConfig, videoParams: VideoParams): Projector {
-  const { videoWidth, videoHeight, fovHorizontalDeg } = videoParams;
+export function buildProjector(
+  configJson: NeonXRConfig,
+  videoParams: VideoParams,
+): Projector {
+  const { videoWidth, videoHeight, fovHorizontalDeg } = videoParams
 
-  const r = configJson.sensorCalibration.offset.rotation;
+  const r = configJson.sensorCalibration.offset.rotation
 
   // config.json stores rotation as Euler angles in degrees (x=pitch, y=yaw, z=roll)
   // Unity's default Euler order is ZXY (applied as: roll first, then pitch, then yaw)
-  const mountQuat = quat.create();
-  quat.fromEuler(mountQuat, r.x, r.y, r.z);
+  const mountQuat = quat.create()
+  quat.fromEuler(mountQuat, r.x, r.y, r.z)
   // quat.fromEuler expects (out, x_deg, y_deg, z_deg) and uses ZXY order internally
   // If ZXY (default Unity) doesn't look right, try:
   // quat.fromEuler(mountQuat, r.y, r.x, r.z); // swap pitch/yaw if off
 
-  const fx = (videoWidth / 2) / Math.tan(toRad(fovHorizontalDeg) / 2);
-  const fy = fx;
-  const cx = videoWidth / 2;
-  const cy = videoHeight / 2;
+  const fx = videoWidth / 2 / Math.tan(toRad(fovHorizontalDeg) / 2)
+  const fy = fx
+  const cx = videoWidth / 2
+  const cy = videoHeight / 2
 
-  return { mountQuat, K: { fx, fy, cx, cy }, videoWidth, videoHeight };
+  return { mountQuat, K: { fx, fy, cx, cy }, videoWidth, videoHeight }
 }
 
 /**
@@ -208,9 +216,9 @@ export function projectGazeSample(
   azimuthDeg: number,
   elevationDeg: number,
 ): GazeProjectionResult {
-  const rayScene = azElToRayScene(azimuthDeg, elevationDeg);
-  const rayQuest = rotateRayToQuestSpace(rayScene, projector.mountQuat);
-  return projectRayToFrame(rayQuest, projector.K);
+  const rayScene = azElToRayScene(azimuthDeg, elevationDeg)
+  const rayQuest = rotateRayToQuestSpace(rayScene, projector.mountQuat)
+  return projectRayToFrame(rayQuest, projector.K)
 }
 
 /**
@@ -228,17 +236,19 @@ export function projectGazeCSV(
   rows: GazeCSVRow[],
 ): ProjectedGazeSample[] {
   return rows.map((row): ProjectedGazeSample => {
-    const timestamp_ns = parseInt(String(row['timestamp [ns]']), 10);
-    const az = parseFloat(String(row['azimuth [deg]']));
-    const el = parseFloat(String(row['elevation [deg]']));
-    const worn = row.worn !== undefined ? parseFloat(String(row.worn)) : 1;
+    const timestamp_ns = parseInt(String(row['timestamp [ns]']), 10)
+    const az = parseFloat(String(row['azimuth [deg]']))
+    const el = parseFloat(String(row['elevation [deg]']))
+    const worn = row.worn !== undefined ? parseFloat(String(row.worn)) : 1
 
     if (worn === 0 || isNaN(az) || isNaN(el)) {
-      console.warn(`Skipping invalid gaze sample at timestamp ${timestamp_ns}: worn=${worn}, az=${row['azimuth [deg]']}, el=${row['elevation [deg]']}`);  
-      return { timestamp_ns, x: null, y: null, valid: false };
+      console.warn(
+        `Skipping invalid gaze sample at timestamp ${timestamp_ns}: worn=${worn}, az=${row['azimuth [deg]']}, el=${row['elevation [deg]']}`,
+      )
+      return { timestamp_ns, x: null, y: null, valid: false }
     }
 
-    const { x, y, valid } = projectGazeSample(projector, az, el);
-    return { timestamp_ns, x, y, valid };
-  });
+    const { x, y, valid } = projectGazeSample(projector, az, el)
+    return { timestamp_ns, x, y, valid }
+  })
 }
