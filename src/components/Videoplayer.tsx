@@ -8,7 +8,7 @@ import {
   Volume2Icon,
   VolumeOffIcon,
 } from 'lucide-react';
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
@@ -116,8 +116,29 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   });
   const lastVolumeRef = useRef(1);
 
-  const overlayLayers: Array<OverlayLayer> = [
-    {
+  // Draw Layers
+  // A stable registry — lives outside the component or as a stable ref
+  const layerRegistryRef = useRef<Map<string, OverlayLayer>>(new Map());
+
+  // Register a layer once (or update it) — call this wherever you define layers
+  const registerLayer = useCallback((layer: OverlayLayer) => {
+    layerRegistryRef.current.set(layer.id, layer);
+  }, []);
+
+  const unregisterLayer = useCallback((id: string) => {
+    layerRegistryRef.current.delete(id);
+  }, []);
+
+  const setLayerCanvasRef = (layerId: string) => (element: HTMLCanvasElement | null) => {
+    layerCanvasRefs.current[layerId] = element;
+    if (layerId === 'gaze') {
+      canvasRef.current = element;
+    }
+  };
+
+// Gaze layer — registered once, reads refs on every draw call
+  useEffect(() => {
+    registerLayer({
       id: 'gaze',
       label: 'Gaze',
       draw: ({ canvas, context, video }) => {
@@ -188,6 +209,13 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
           gazeProjectorRef.current!,
           point.azimuthDeg, point.elevationDeg
         );
+
+        console.log('Drawing gaze point for video time', video.currentTime, 's:', {
+          rawGazeX: point.gazeX,
+          rawGazeY: point.gazeY,
+          projectedX: projectedPoint.x,
+          projectedY: projectedPoint.y
+        });
         const circleConfig = circleConfigRef.current;
 
         if (!projectedPoint.valid || projectedPoint.x === null || projectedPoint.y === null) {
@@ -204,15 +232,9 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         context.lineWidth = circleConfig.stroke;
         context.stroke();
       },
-    },
-  ];
-
-  const setLayerCanvasRef = (layerId: string) => (element: HTMLCanvasElement | null) => {
-    layerCanvasRefs.current[layerId] = element;
-    if (layerId === 'gaze') {
-      canvasRef.current = element;
-    }
-  };
+    });
+    return () => unregisterLayer('gaze');
+  }, [registerLayer, unregisterLayer]); // stable deps — runs once
 
   // On Gaze Circle Config Change: update ref and redraw
   useEffect(() => {
@@ -340,6 +362,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   //   loadConfig();
   // }, [xrConfigFile]);
 
+  // On XR Config Change: rebuild projector with new config and redraw (also depends on video metadata for dimensions)
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
@@ -411,7 +434,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         return;
       }
 
-      for (const { id } of overlayLayers) {
+      for (const { id } of layerRegistryRef.current.values()) {
         const canvas = layerCanvasRefs.current[id];
         if (!canvas) continue;
 
@@ -424,16 +447,14 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       setCurrentTime(video.currentTime);
       setDuration(Number.isFinite(video.duration) ? video.duration : 0);
 
-      for (const layer of overlayLayers) {
-        const canvas = layerCanvasRefs.current[layer.id];
+      for (const [id, layer] of layerRegistryRef.current) {
+        const canvas = layerCanvasRefs.current[id];
         const context = canvas?.getContext('2d');
 
         if (!canvas || !context) continue;
 
         context.clearRect(0, 0, canvas.width, canvas.height);
-        if (!enabledLayersRef.current[layer.id]) {
-          continue;
-        }
+        if (!enabledLayersRef.current[id]) continue;
 
         layer.draw({ canvas, context, video });
       }
@@ -650,7 +671,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
           className="block w-full max-h-[70vh] fullscreen:max-h-screen"
           playsInline
         />
-        {overlayLayers.map((layer) => (
+        {Array.from(layerRegistryRef.current.values()).map((layer) => (
           <canvas
             key={layer.id}
             ref={setLayerCanvasRef(layer.id)}
@@ -739,7 +760,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
           <span className="text-sm font-medium text-muted-foreground">
             Layers
           </span>
-          {overlayLayers.map((layer) => (
+          {Array.from(layerRegistryRef.current.values()).map((layer) => (
             <Button
               key={layer.id}
               size="sm"
