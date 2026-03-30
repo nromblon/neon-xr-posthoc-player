@@ -30,6 +30,7 @@ interface VideoPlayerProps {
   videoRef: React.RefObject<HTMLVideoElement | null>
   videoFile: File
   xrConfigFile: File
+  fovHorizontalDeg: number
   circleConfig: CircleConfig
   gazeStartMs: number
   onFrameDurationChange?: (frameDurationSeconds: number) => void
@@ -91,6 +92,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   videoRef,
   videoFile,
   xrConfigFile,
+  fovHorizontalDeg,
   circleConfig = defaultCircleConfig,
   gazeStartMs,
   onFrameDurationChange,
@@ -413,7 +415,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         const projector = buildProjector(config, {
           videoWidth: video.videoWidth,
           videoHeight: video.videoHeight,
-          fovHorizontalDeg: 90,
+          fovHorizontalDeg: fovHorizontalDeg,
         })
         gazeProjectorRef.current = projector
         drawFrameRef.current?.()
@@ -430,7 +432,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     // Otherwise wait for it
     video.addEventListener('loadedmetadata', buildFromVideo)
     return () => video.removeEventListener('loadedmetadata', buildFromVideo)
-  }, [xrConfigFile]) // only xrConfigFile — video dimensions come from the event
+  }, [fovHorizontalDeg, xrConfigFile]) // depends on video metadata and config file
 
   // On Enabled Layers Change: redraw with new layer visibility
   useEffect(() => {

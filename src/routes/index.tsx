@@ -47,6 +47,8 @@ function App() {
   const [videoFile, setVideoFile] = React.useState<File | null>(null)
   // Calibration Config Data
   const [configFile, setConfigFile] = React.useState<File | null>(null)
+  // Horizontal FOV for projection calculations
+  const [fovHorizontalDeg, setFovHorizontalDeg] = React.useState(82)
 
   const videoRef = useRef<HTMLVideoElement>(null)
 
@@ -120,6 +122,7 @@ function App() {
             gazeDataFile={gazeFile}
             videoFile={videoFile}
             xrConfigFile={configFile}
+            fovHorizontalDeg={fovHorizontalDeg}
             circleConfig={{ stroke, radius, color }}
             gazeStartMs={gazeStartMs}
             onFrameDurationChange={(frameDurationSeconds) => {
@@ -219,6 +222,19 @@ function App() {
             }
           }}
         />
+
+        <Label className="text-sm" htmlFor="recording-fov">
+          {' '}
+          Horizontal FOV{' '}
+        </Label>
+        <SliderNumberInput
+          id="recording-fov"
+          value={fovHorizontalDeg}
+          onValueChange={setFovHorizontalDeg}
+          min={45}
+          max={120}
+        />
+
         <Separator className="mt-4 mb-2" />
         <Label className="text-md font-bold mb-2"> Align </Label>
         <Button
