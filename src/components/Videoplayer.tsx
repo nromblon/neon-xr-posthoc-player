@@ -213,6 +213,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         console.log('Drawing gaze point for video time', video.currentTime, 's:', {
           rawGazeX: point.gazeX,
           rawGazeY: point.gazeY,
+          azimuthDeg: point.azimuthDeg,
+          elevationDeg: point.elevationDeg,
           projectedX: projectedPoint.x,
           projectedY: projectedPoint.y
         });
@@ -274,6 +276,10 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
             timestampNs,
             gazeX,
             gazeY,
+            gazeMonoLeftX,
+            gazeMonoLeftY,
+            gazemonoRightX,
+            gazemonoRightY,
             worn,
             fixationId,
             blinkId,
