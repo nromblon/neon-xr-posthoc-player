@@ -252,7 +252,7 @@ function App() {
             type="button"
             variant="outline"
             size="icon"
-            title="Shift gaze start to previous frame"
+            title="Press when gaze is behind by one frame"
             onClick={() => shiftGazeStartByFrame(-1)}
             disabled={!videoFile || !gazeFile || !configFile}
           >
@@ -294,7 +294,7 @@ function App() {
             type="button"
             variant="outline"
             size="icon"
-            title="Shift gaze start to next frame"
+            title="Press when gaze is ahead by one frame"
             onClick={() => shiftGazeStartByFrame(1)}
             disabled={!videoFile || !gazeFile || !configFile}
           >
