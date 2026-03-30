@@ -18,7 +18,13 @@ import {
 } from '@/components/ui/shadcn-io/color-picker'
 import { SliderNumberInput } from '@/components/ui/slider-number-input'
 import VideoPlayer from '@/components/Videoplayer'
-import { Empty,  EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '@/components/ui/empty'
 import { Button } from '@/components/ui/button'
 
 export const Route = createFileRoute('/')({ component: App })
@@ -39,14 +45,18 @@ function App() {
   const [shouldShowGazeError, showGazeError] = React.useState(false)
   // Scene Video Data
   const [videoFile, setVideoFile] = React.useState<File | null>(null)
+  // Calibration Config Data
+  const [configFile, setConfigFile] = React.useState<File | null>(null)
+  // Horizontal FOV for projection calculations
+  const [fovHorizontalDeg, setFovHorizontalDeg] = React.useState(82)
 
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null)
 
   // Align-related state
-  const [gazeStartMs, setGazeStartMs] = React.useState<number>(0);
+  const [gazeStartMs, setGazeStartMs] = React.useState<number>(0)
   const [frameDurationMs, setFrameDurationMs] = React.useState<number>(
     DEFAULT_FRAME_DURATION_MS,
-  );
+  )
 
   const findGazeFile = (file: FileList) => {
     for (let i = 0; i < file.length; i++) {
@@ -93,7 +103,7 @@ function App() {
     const seconds = parseInt(secInput.value) || 0
     const milliseconds = parseInt(msInput.value) || 0
     const totalMs = minutes * 60 * 1000 + seconds * 1000 + milliseconds
-    setGazeStartMs(totalMs);
+    setGazeStartMs(totalMs)
   }
 
   const shiftGazeStartByFrame = (direction: 1 | -1) => {
@@ -106,12 +116,14 @@ function App() {
         id="video-div"
         className="flex items-center justify-center h-full flex-1"
       >
-        {gazeFile && videoFile ? (
-          <VideoPlayer 
+        {gazeFile && videoFile && configFile ? (
+          <VideoPlayer
             videoRef={videoRef}
-            gazeDataFile={gazeFile} 
-            videoFile={videoFile} 
-            circleConfig={{ stroke, radius, color }} 
+            gazeDataFile={gazeFile}
+            videoFile={videoFile}
+            xrConfigFile={configFile}
+            fovHorizontalDeg={fovHorizontalDeg}
+            circleConfig={{ stroke, radius, color }}
             gazeStartMs={gazeStartMs}
             onFrameDurationChange={(frameDurationSeconds) => {
               if (frameDurationSeconds > 0) {
@@ -119,17 +131,19 @@ function App() {
               }
             }}
           />
-        ) : 
+        ) : (
           <Empty>
             <EmptyHeader>
               <EmptyMedia variant="icon">
                 <BookXIcon />
               </EmptyMedia>
               <EmptyTitle>No data</EmptyTitle>
-              <EmptyDescription>Choose XR Video and Gaze Data Folder</EmptyDescription>
+              <EmptyDescription>
+                Choose XR Video and Gaze Data Folder
+              </EmptyDescription>
             </EmptyHeader>
           </Empty>
-      }
+        )}
       </div>
       <div
         id="settings-div"
@@ -147,7 +161,7 @@ function App() {
           onChange={(e) => {
             const file = e.target.files?.[0]
             if (file) {
-              setVideoFile(file);
+              setVideoFile(file)
             }
           }}
         />
@@ -160,18 +174,18 @@ function App() {
           inputRef={folderPickerRef}
           onPick={(f) => {
             console.log(f)
-            const gf = findGazeFile(f);
+            const gf = findGazeFile(f)
             if (gf) {
-              setGazeFile(gf);
-            } 
-            
-            console.log(gf);
+              setGazeFile(gf)
+            }
+
+            console.log(gf)
             if (!gf || f.length === 0) {
-              setGazeFile(null);
-              showGazeError(true);
+              setGazeFile(null)
+              showGazeError(true)
               setFolderPickerKey((k) => k + 1)
               if (folderPickerRef.current) {
-                folderPickerRef.current.value = '';
+                folderPickerRef.current.value = ''
               }
               // alert('Unable to find valid gaze data file. Please select a folder containing "gaze.csv".')
               // console.log('missing gaze file')
@@ -192,9 +206,41 @@ function App() {
             containing 'gaze.csv'.
           </Toast.Description>
         </Toast.Root>
+
+        <Label className="text-sm" htmlFor="calibration-file-upload">
+          {' '}
+          Neon XR Calibration File (config.json){' '}
+        </Label>
+        <Input
+          id="calibration-file-upload"
+          type="file"
+          className="text-muted-foreground"
+          onChange={(e) => {
+            const file = e.target.files?.[0]
+            if (file) {
+              setConfigFile(file)
+            }
+          }}
+        />
+
+        <Label className="text-sm" htmlFor="recording-fov">
+          {' '}
+          Horizontal FOV{' '}
+        </Label>
+        <SliderNumberInput
+          id="recording-fov"
+          value={fovHorizontalDeg}
+          onValueChange={setFovHorizontalDeg}
+          min={45}
+          max={120}
+        />
+
         <Separator className="mt-4 mb-2" />
         <Label className="text-md font-bold mb-2"> Align </Label>
-        <Button onClick={setCurrentTimeAsGazeStart} disabled={!videoFile || !gazeFile}>
+        <Button
+          onClick={setCurrentTimeAsGazeStart}
+          disabled={!videoFile || !gazeFile || !configFile}
+        >
           Set Current Time as Gaze Start Time
         </Button>
         <Label className="text-sm" htmlFor="gaze-start-time">
@@ -208,7 +254,7 @@ function App() {
             size="icon"
             title="Shift gaze start to previous frame"
             onClick={() => shiftGazeStartByFrame(-1)}
-            disabled={!videoFile || !gazeFile}
+            disabled={!videoFile || !gazeFile || !configFile}
           >
             <SkipBackIcon />
           </Button>
@@ -227,7 +273,7 @@ function App() {
             id="s-gst"
             type="number"
             placeholder="sec"
-            disabled={!videoFile || !gazeFile}
+            disabled={!videoFile || !gazeFile || !configFile}
             min={0}
             max={59}
             onChange={recomputeGazeStartMs}
@@ -238,7 +284,7 @@ function App() {
             id="ms-gst"
             type="number"
             placeholder="ms"
-            disabled={!videoFile || !gazeFile}
+            disabled={!videoFile || !gazeFile || !configFile}
             min={0}
             max={999}
             onChange={recomputeGazeStartMs}
@@ -250,7 +296,7 @@ function App() {
             size="icon"
             title="Shift gaze start to next frame"
             onClick={() => shiftGazeStartByFrame(1)}
-            disabled={!videoFile || !gazeFile}
+            disabled={!videoFile || !gazeFile || !configFile}
           >
             <SkipForwardIcon />
           </Button>
@@ -260,36 +306,38 @@ function App() {
           {' '}
           Gaze Visualizer Style{' '}
         </Label>
-        <Label className="text-sm" htmlFor="xr-file-upload">
+        <Label className="text-sm" htmlFor="gaze-radius">
           {' '}
           Radius{' '}
         </Label>
         <SliderNumberInput
+          id="gaze-radius"
           value={radius}
           onValueChange={setRadius}
           min={1}
           max={100}
         />
-        <Label className="text-sm" htmlFor="xr-file-upload">
+        <Label className="text-sm" htmlFor="gaze-stroke">
           {' '}
           Stroke Width{' '}
         </Label>
         <SliderNumberInput
+          id="gaze-stroke"
           value={stroke}
           onValueChange={setStroke}
           min={1}
           max={100}
         />
-        <Label className="text-sm" htmlFor="xr-file-upload">
+        <Label className="text-sm" htmlFor="gaze-color">
           {' '}
           Color{' '}
         </Label>
         <ColorPicker
+          id="gaze-color"
           defaultValue={color}
           color={color}
           onChange={(v) => {
             const c = Color(v)
-            console.log(c.hexa())
             setColor(c.hexa())
           }}
           className="max-w-sm h-70 rounded-md border bg-background p-4 shadow-sm"

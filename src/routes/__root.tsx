@@ -49,20 +49,20 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
       <body>
         <Toast.Provider duration={4000}>
-        {children}
-        <TanStackDevtools
-          config={{
-            position: 'bottom-right',
-          }}
-          plugins={[
-            {
-              name: 'Tanstack Router',
-              render: <TanStackRouterDevtoolsPanel />,
-            },
-            TanStackQueryDevtools,
-          ]}
-        />
-        <Toast.Viewport className="fixed bottom-0 right-0 m-4 flex flex-col gap-2 z-50" />
+          {children}
+          <TanStackDevtools
+            config={{
+              position: 'bottom-right',
+            }}
+            plugins={[
+              {
+                name: 'Tanstack Router',
+                render: <TanStackRouterDevtoolsPanel />,
+              },
+              TanStackQueryDevtools,
+            ]}
+          />
+          <Toast.Viewport className="fixed bottom-0 right-0 m-4 flex flex-col gap-2 z-50" />
         </Toast.Provider>
         <Scripts />
       </body>
