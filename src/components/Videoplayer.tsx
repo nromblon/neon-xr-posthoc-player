@@ -1,4 +1,5 @@
 import {
+  GaugeIcon,
   MaximizeIcon,
   MinimizeIcon,
   PauseIcon,
@@ -11,6 +12,11 @@ import {
 import React, { useEffect, useState, useRef, useCallback } from 'react'
 
 import { Button } from '@/components/ui/button'
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from '@/components/ui/hover-card'
 import { Slider } from '@/components/ui/slider'
 
 import {
@@ -68,6 +74,7 @@ const defaultCircleConfig: CircleConfig = {
 }
 
 const DEFAULT_FRAME_DURATION_SECONDS = 1 / 30
+const PLAYBACK_RATES = [0.5, 1, 1.5, 2] as const
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max)
@@ -115,6 +122,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [duration, setDuration] = useState(0)
   const [isMuted, setIsMuted] = useState(false)
   const [volume, setVolume] = useState(1)
+  const [playbackRate, setPlaybackRate] = useState<(typeof PLAYBACK_RATES)[number]>(1)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [enabledLayers, setEnabledLayers] = useState<Record<string, boolean>>({
     gaze: true,
@@ -204,7 +212,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         }
 
         // Gaze Data Point Handling
-        // TODO: insert projection in this section - currently using raw gazeX/gazeY for visualization, but should project azimuth/elevation to video frame coordinates using gazeProjectorRef and projectGazeSample()
         const point = gazeData[i]
         // const { width, height } = gazeSourceSizeRef.current;
         // const scaleX = width > 0 ? canvas.width / width : 1;
@@ -230,8 +237,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
             projectedY: projectedPoint.y,
           },
         )
-        const circleConfig = circleConfigRef.current
-
         if (
           !projectedPoint.valid ||
           projectedPoint.x === null ||
@@ -542,6 +547,11 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       }
     }
 
+    const handleRateChange = () => {
+      const nextRate = PLAYBACK_RATES.find((rate) => rate === video.playbackRate)
+      setPlaybackRate(nextRate ?? 1)
+    }
+
     const scheduleFrameProbe = () => {
       if (typeof video.requestVideoFrameCallback !== 'function') {
         return
@@ -570,10 +580,12 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     video.addEventListener('timeupdate', handleTimeUpdate)
     video.addEventListener('durationchange', handleDurationChange)
     video.addEventListener('volumechange', handleVolumeChange)
+    video.addEventListener('ratechange', handleRateChange)
 
     syncCanvasSize()
     drawFrame()
     handleVolumeChange()
+    handleRateChange()
     scheduleFrameProbe()
 
     return () => {
@@ -595,6 +607,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       video.removeEventListener('timeupdate', handleTimeUpdate)
       video.removeEventListener('durationchange', handleDurationChange)
       video.removeEventListener('volumechange', handleVolumeChange)
+      video.removeEventListener('ratechange', handleRateChange)
     }
   }, [onFrameDurationChange, videoRef])
 
@@ -655,6 +668,14 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     }
     video.muted = true
     setIsMuted(true)
+  }
+
+  const updatePlaybackRate = (nextRate: (typeof PLAYBACK_RATES)[number]) => {
+    const video = videoRef.current
+    if (!video) return
+
+    video.playbackRate = nextRate
+    setPlaybackRate(nextRate)
   }
 
   const updateVolume = (nextVolume: number) => {
@@ -765,6 +786,33 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
               />
             </div>
           </div>
+          <HoverCard openDelay={100} closeDelay={150}>
+            <HoverCardTrigger asChild>
+              <Button
+                size="icon-sm"
+                variant="outline"
+                title={`Playback speed: ${playbackRate}x`}
+                aria-label={`Playback speed: ${playbackRate}x`}
+              >
+                <GaugeIcon />
+              </Button>
+            </HoverCardTrigger>
+            <HoverCardContent className="w-auto p-2" side="top" align="start">
+              <div className="flex items-center gap-1">
+                {PLAYBACK_RATES.map((rate) => (
+                  <Button
+                    key={rate}
+                    onClick={() => updatePlaybackRate(rate)}
+                    size="sm"
+                    variant={playbackRate === rate ? 'default' : 'outline'}
+                    title={`Set playback speed to ${rate}x`}
+                  >
+                    {rate}x
+                  </Button>
+                ))}
+              </div>
+            </HoverCardContent>
+          </HoverCard>
           <Button
             onClick={() => void toggleFullscreen()}
             size="sm"
