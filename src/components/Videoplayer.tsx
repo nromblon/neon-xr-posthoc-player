@@ -24,6 +24,7 @@ import {
   buildProjector,
   projectGazeSample,
 } from '@/lib/gaze-projection'
+import { EventsTimeline } from './video-player/events-timeline'
 
 interface CircleConfig {
   stroke: number
@@ -856,6 +857,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
           ))}
         </div>
       </div>
+      <EventsTimeline />
     </div>
   )
 }

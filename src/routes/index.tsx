@@ -111,7 +111,7 @@ function App() {
   }
 
   return (
-    <div className="display flex justify-between items-center my-4">
+    <div className="display flex justify-between items-start my-4">
       <div
         id="video-div"
         className="flex items-center justify-center h-full flex-1"
@@ -147,7 +147,7 @@ function App() {
       </div>
       <div
         id="settings-div"
-        className="display flex flex-col gap-2 p-5 mx-5 border h-max w-96 rounded-lg"
+        className="display flex flex-col align-top gap-2 p-5 mx-5 border h-max w-96 rounded-lg"
       >
         <Label className="text-md font-bold mb-2"> Setup </Label>
         <Label className="text-sm" htmlFor="xr-file-upload">
