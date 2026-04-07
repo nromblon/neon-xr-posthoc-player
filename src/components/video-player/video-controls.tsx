@@ -18,6 +18,7 @@ import {
   HoverCardTrigger,
 } from '@/components/ui/hover-card'
 import { Slider } from '@/components/ui/slider'
+import type { Event as AnnotationEvent } from '@/types/annotations'
 import { VideoEventsTimeline } from './video-events-timeline'
 
 const EVENT_NAME_COLUMN_WIDTH_PX = 160
@@ -31,6 +32,7 @@ export interface VideoControlsProps {
   currentTime: number
   duration: number
   enabledLayers: Record<string, boolean>
+  events: AnnotationEvent[]
   isFullscreen: boolean
   isMuted: boolean
   isPlaying: boolean
@@ -53,6 +55,7 @@ export const VideoControls: React.FC<VideoControlsProps> = ({
   currentTime,
   duration,
   enabledLayers,
+  events,
   isFullscreen,
   isMuted,
   isPlaying,
@@ -195,6 +198,7 @@ export const VideoControls: React.FC<VideoControlsProps> = ({
         currentTime={currentTime}
         duration={duration}
         eventNameColumnWidthPx={EVENT_NAME_COLUMN_WIDTH_PX}
+        events={events}
         formatTime={formatTime}
         onSeek={onSeek}
       />

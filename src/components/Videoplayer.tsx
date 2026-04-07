@@ -7,6 +7,7 @@ import {
   buildProjector,
   projectGazeSample,
 } from '@/lib/gaze-projection'
+import type { Event as AnnotationEvent } from '@/types/annotations'
 import { VideoControls } from './video-player/video-controls'
 
 interface CircleConfig {
@@ -122,6 +123,13 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     useState(false)
   const lastVolumeRef = useRef(1)
   const effectiveVideoDimensions = manualVideoDimensions
+  const timelineEvents: AnnotationEvent[] = [
+    { name: 'recording.begin', timestamp_ns: 0 },
+    {
+      name: 'recording.end',
+      timestamp_ns: Math.max(duration, 0) * 1_000_000_000,
+    },
+  ]
 
   // Draw Layers
   // A stable registry — lives outside the component or as a stable ref
@@ -659,12 +667,13 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     setIsMuted(true)
   }
 
-  const updatePlaybackRate = (nextRate: (typeof PLAYBACK_RATES)[number]) => {
+  const updatePlaybackRate = (nextRate: number) => {
     const video = videoRef.current
     if (!video) return
 
-    video.playbackRate = nextRate
-    setPlaybackRate(nextRate)
+    const normalizedRate = PLAYBACK_RATES.find((rate) => rate === nextRate) ?? 1
+    video.playbackRate = normalizedRate
+    setPlaybackRate(normalizedRate)
   }
 
   const updateVolume = (nextVolume: number) => {
@@ -844,6 +853,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         currentTime={currentTime}
         duration={duration}
         enabledLayers={enabledLayers}
+        events={timelineEvents}
         isFullscreen={isFullscreen}
         isMuted={isMuted}
         isPlaying={isPlaying}

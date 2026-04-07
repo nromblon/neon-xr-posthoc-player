@@ -4,14 +4,15 @@ import React from 'react'
 import { Button } from '@/components/ui/button'
 import { InputGroup, InputGroupInput } from '@/components/ui/input-group'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import type { Event as AnnotationEvent } from '@/types/annotations'
 
-const TIMELINE_TAGS = ['recording.begin', 'recording.end']
 const TIMELINE_PLAYHEAD = '#6366f1'
 
 export interface VideoEventsTimelineProps {
   currentTime: number
   duration: number
   eventNameColumnWidthPx: number
+  events: AnnotationEvent[]
   formatTime: (seconds: number) => string
   onSeek: (nextTime: number) => void
 }
@@ -20,6 +21,7 @@ export const VideoEventsTimeline: React.FC<VideoEventsTimelineProps> = ({
   currentTime,
   duration,
   eventNameColumnWidthPx,
+  events,
   formatTime,
   onSeek,
 }) => {
@@ -265,30 +267,38 @@ export const VideoEventsTimeline: React.FC<VideoEventsTimelineProps> = ({
               </div>
             </div>
 
-            {TIMELINE_TAGS.map((tag) => (
+            {events.map((eventItem) => {
+              const eventTimeSeconds = Math.min(
+                Math.max(eventItem.timestamp_ns / 1_000_000_000, 0),
+                safeDuration,
+              )
+              const eventLeft = `${(eventTimeSeconds / safeDuration) * 100}%`
+
+              return (
               <div
-                key={tag}
+                key={`${eventItem.name}-${eventItem.timestamp_ns}`}
                 className="grid min-h-12 border-b last:border-b-0"
                 style={{ gridTemplateColumns: timelineGridTemplate }}
               >
-                <div className="border-r px-4 py-3 text-sm">{tag}</div>
+                <div className="border-r px-4 py-3 text-sm">{eventItem.name}</div>
                 <div className="relative px-4 py-3">
                   <div
                     className="relative h-7 cursor-pointer rounded-sm border bg-muted/10"
                     onPointerDown={handleTimelinePointerDown}
                     onPointerMove={handleTimelinePointerMove}
                   >
-                    <div className="absolute inset-y-0 left-[2%] flex items-center">
-                      <div className="h-2 w-2 rotate-45 border border-foreground/70 bg-background" />
-                    </div>
-                    <div className="absolute inset-y-0 right-[1%] flex items-center">
+                    <div
+                      className="absolute inset-y-0 flex -translate-x-1/2 items-center"
+                      style={{ left: eventLeft }}
+                    >
                       <div className="h-2 w-2 rotate-45 border border-foreground/70 bg-background" />
                     </div>
                     {renderPlayhead()}
                   </div>
                 </div>
               </div>
-            ))}
+              )
+            })}
           </div>
         </ScrollArea>
       </div>
