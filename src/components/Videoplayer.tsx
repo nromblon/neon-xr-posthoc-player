@@ -68,6 +68,11 @@ interface OverlayLayer {
   draw: (state: OverlayRenderState) => void
 }
 
+interface VideoDimensions {
+  width: number
+  height: number
+}
+
 const defaultCircleConfig: CircleConfig = {
   stroke: 2,
   radius: 5,
@@ -128,7 +133,12 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [enabledLayers, setEnabledLayers] = useState<Record<string, boolean>>({
     gaze: true,
   })
+  const [manualVideoDimensions, setManualVideoDimensions] =
+    useState<VideoDimensions | null>(null)
+  const [needsManualVideoDimensions, setNeedsManualVideoDimensions] =
+    useState(false)
   const lastVolumeRef = useRef(1)
+  const effectiveVideoDimensions = manualVideoDimensions
 
   // Draw Layers
   // A stable registry — lives outside the component or as a stable ref
@@ -223,20 +233,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
           gazeProjectorRef.current!,
           point.azimuthDeg,
           point.elevationDeg,
-        )
-
-        console.log(
-          'Drawing gaze point for video time',
-          video.currentTime,
-          's:',
-          {
-            rawGazeX: point.gazeX,
-            rawGazeY: point.gazeY,
-            azimuthDeg: point.azimuthDeg,
-            elevationDeg: point.elevationDeg,
-            projectedX: projectedPoint.x,
-            projectedY: projectedPoint.y,
-          },
         )
         if (
           !projectedPoint.valid ||
@@ -365,80 +361,86 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   // On Video File Change: reset video src and redraw
   useEffect(() => {
     const url = URL.createObjectURL(videoFile)
+    setManualVideoDimensions(null)
+    setNeedsManualVideoDimensions(false)
     if (videoRef.current) {
       videoRef.current.src = url
+      videoRef.current.load()
     }
     return () => {
       URL.revokeObjectURL(url)
     }
   }, [videoFile])
 
-  // // On Gaze Setup Change: rebuild projector with new config and redraw
-  // useEffect(() => {
-  //   const video = videoRef.current;
-  //   if (!video) return;
-
-  //   // Build Gaze Projector
-  //   gazeProjectorRef.current = null;
-
-  //   const loadConfig = async () => {
-  //     try {
-  //       const videoParams : VideoParams = {
-  //         videoWidth: video.videoWidth || 1600,
-  //         videoHeight: video.videoHeight || 1200,
-  //         fovHorizontalDeg: 90, // Assuming a default FOV; ideally this should come from the config or be user-specified
-  //       };
-
-  //       const text = await xrConfigFile.text();
-  //       const config = JSON.parse(text);
-  //       const projector = buildProjector(config, videoParams);
-  //       gazeProjectorRef.current = projector;
-
-  //       console.log('Gaze projector built with config:', config, 'and video params:', videoParams);
-
-  //     } catch (error) {
-  //       console.error('Failed to load or parse XR config file:', error);
-  //     }
-  //   };
-
-  //   loadConfig();
-  // }, [xrConfigFile]);
-
   // On XR Config Change: rebuild projector with new config and redraw (also depends on video metadata for dimensions)
   useEffect(() => {
     const video = videoRef.current
     if (!video) return
 
+    let cancelled = false
+    let buildAttemptId = 0
+
     gazeProjectorRef.current = null
+    drawFrameRef.current?.()
 
-    const buildFromVideo = async () => {
-      if (!video.videoWidth || !video.videoHeight) return // guard: metadata not ready
+    const tryBuildProjector = () => {
+      const videoWidth = manualVideoDimensions?.width ?? video.videoWidth
+      const videoHeight = manualVideoDimensions?.height ?? video.videoHeight
 
-      try {
-        const text = await xrConfigFile.text()
-        const config = JSON.parse(text)
+      if (!videoWidth || !videoHeight) {
+        return
+      }
 
-        const projector = buildProjector(config, {
-          videoWidth: video.videoWidth,
-          videoHeight: video.videoHeight,
-          fovHorizontalDeg: fovHorizontalDeg,
-        })
-        gazeProjectorRef.current = projector
-        drawFrameRef.current?.()
-      } catch (e) {
-        console.error('Failed to build projector:', e)
+      const currentAttemptId = ++buildAttemptId
+
+      void (async () => {
+        try {
+          const text = await xrConfigFile.text()
+          if (cancelled || currentAttemptId !== buildAttemptId) {
+            return
+          }
+
+          const config = JSON.parse(text)
+          const projector = buildProjector(config, {
+            videoWidth,
+            videoHeight,
+            fovHorizontalDeg,
+          })
+
+          gazeProjectorRef.current = projector
+          setNeedsManualVideoDimensions(false)
+          drawFrameRef.current?.()
+        } catch (e) {
+          if (!cancelled) {
+            console.error('Failed to build projector:', e)
+          }
+        }
+      })()
+    }
+
+    const readinessEvents = [
+      'loadedmetadata',
+      'loadeddata',
+      'canplay',
+      'durationchange',
+      'resize',
+    ] as const
+
+    for (const eventName of readinessEvents) {
+      video.addEventListener(eventName, tryBuildProjector)
+    }
+
+    if (video.readyState >= HTMLMediaElement.HAVE_METADATA) {
+      tryBuildProjector()
+    }
+
+    return () => {
+      cancelled = true
+      for (const eventName of readinessEvents) {
+        video.removeEventListener(eventName, tryBuildProjector)
       }
     }
-
-    // If metadata already loaded (e.g. file was already set), build immediately
-    if (video.videoWidth && video.videoHeight) {
-      void buildFromVideo()
-    }
-
-    // Otherwise wait for it
-    video.addEventListener('loadedmetadata', buildFromVideo)
-    return () => video.removeEventListener('loadedmetadata', buildFromVideo)
-  }, [fovHorizontalDeg, xrConfigFile]) // depends on video metadata and config file
+  }, [fovHorizontalDeg, manualVideoDimensions, videoFile, videoRef, xrConfigFile]) // depends on source, metadata, and config
 
   // On Enabled Layers Change: redraw with new layer visibility
   useEffect(() => {
@@ -468,7 +470,10 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     let frameCallbackId: number | null = null
 
     const syncCanvasSize = () => {
-      if (!video.videoWidth || !video.videoHeight) {
+      const videoWidth = manualVideoDimensions?.width ?? video.videoWidth
+      const videoHeight = manualVideoDimensions?.height ?? video.videoHeight
+
+      if (!videoWidth || !videoHeight) {
         return
       }
 
@@ -476,8 +481,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         const canvas = layerCanvasRefs.current[id]
         if (!canvas) continue
 
-        canvas.width = video.videoWidth
-        canvas.height = video.videoHeight
+        canvas.width = videoWidth
+        canvas.height = videoHeight
       }
     }
 
@@ -610,7 +615,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       video.removeEventListener('volumechange', handleVolumeChange)
       video.removeEventListener('ratechange', handleRateChange)
     }
-  }, [onFrameDurationChange, videoRef])
+  }, [manualVideoDimensions, onFrameDurationChange, videoRef])
 
   const togglePlayback = async () => {
     const video = videoRef.current
@@ -712,6 +717,98 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     await container.requestFullscreen()
   }
 
+  const requestManualVideoDimensions = useCallback(() => {
+    const currentWidth = manualVideoDimensions?.width
+    const currentHeight = manualVideoDimensions?.height
+    const widthInput = window.prompt(
+      `Enter the video width in pixels for "${videoFile.name}"`,
+      currentWidth ? String(currentWidth) : '',
+    )
+
+    if (widthInput === null) {
+      return
+    }
+
+    const heightInput = window.prompt(
+      `Enter the video height in pixels for "${videoFile.name}"`,
+      currentHeight ? String(currentHeight) : '',
+    )
+
+    if (heightInput === null) {
+      return
+    }
+
+    const width = Number(widthInput.trim())
+    const height = Number(heightInput.trim())
+
+    if (
+      !Number.isFinite(width) ||
+      !Number.isFinite(height) ||
+      width <= 0 ||
+      height <= 0
+    ) {
+      window.alert('Video width and height must be positive numbers.')
+      return
+    }
+
+    setManualVideoDimensions({
+      width: Math.round(width),
+      height: Math.round(height),
+    })
+    setNeedsManualVideoDimensions(false)
+  }, [manualVideoDimensions, videoFile.name])
+
+  useEffect(() => {
+    const video = videoRef.current
+    if (!video) return
+
+    if (manualVideoDimensions) {
+      setNeedsManualVideoDimensions(false)
+      return
+    }
+
+    let detectionTimeoutId: number | null = null
+
+    const evaluateManualDimensionFallback = () => {
+      if (
+        video.readyState >= HTMLMediaElement.HAVE_METADATA &&
+        video.currentSrc &&
+        !video.videoWidth &&
+        !video.videoHeight
+      ) {
+        setNeedsManualVideoDimensions(true)
+      }
+    }
+
+    const scheduleEvaluation = () => {
+      if (detectionTimeoutId !== null) {
+        window.clearTimeout(detectionTimeoutId)
+      }
+
+      detectionTimeoutId = window.setTimeout(() => {
+        evaluateManualDimensionFallback()
+      }, 1200)
+    }
+
+    const relevantEvents = ['loadedmetadata', 'loadeddata', 'canplay'] as const
+    for (const eventName of relevantEvents) {
+      video.addEventListener(eventName, scheduleEvaluation)
+    }
+
+    if (video.currentSrc) {
+      scheduleEvaluation()
+    }
+
+    return () => {
+      if (detectionTimeoutId !== null) {
+        window.clearTimeout(detectionTimeoutId)
+      }
+      for (const eventName of relevantEvents) {
+        video.removeEventListener(eventName, scheduleEvaluation)
+      }
+    }
+  }, [manualVideoDimensions, videoFile.name, videoRef])
+
   return (
     /* Video Player Including Controls */
     <div className="flex w-full max-w-5xl flex-col gap-3">
@@ -719,11 +816,22 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       <div
         ref={containerRef}
         className="relative w-fit self-center overflow-hidden rounded-lg bg-black shadow-sm"
+        style={
+          effectiveVideoDimensions
+            ? {
+                width: `${effectiveVideoDimensions.width}px`,
+                maxWidth: '100%',
+                aspectRatio: `${effectiveVideoDimensions.width} / ${effectiveVideoDimensions.height}`,
+              }
+            : undefined
+        }
       >
         <video
           ref={videoRef}
           className="block w-full max-h-[70vh] fullscreen:max-h-screen"
           playsInline
+          width={effectiveVideoDimensions?.width}
+          height={effectiveVideoDimensions?.height}
         />
         {Array.from(layerRegistryRef.current.values()).map((layer) => (
           <canvas
@@ -735,6 +843,19 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
           />
         ))}
       </div>
+
+      {needsManualVideoDimensions ? (
+        <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">
+          Chrome loaded the file but did not expose video dimensions. You can
+          enter the recording width and height manually so gaze projection can
+          still initialize.
+          <div className="mt-2">
+            <Button onClick={requestManualVideoDimensions} size="sm">
+              Enter Width and Height
+            </Button>
+          </div>
+        </div>
+      ) : null}
 
       <div className="rounded-lg border bg-card p-3 shadow-sm">
         <div className="mb-3 flex flex-wrap items-center gap-2">
