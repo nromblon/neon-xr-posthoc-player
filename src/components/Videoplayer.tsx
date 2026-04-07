@@ -1,30 +1,13 @@
-import {
-  GaugeIcon,
-  MaximizeIcon,
-  MinimizeIcon,
-  PauseIcon,
-  PlayIcon,
-  SkipBackIcon,
-  SkipForwardIcon,
-  Volume2Icon,
-  VolumeOffIcon,
-} from 'lucide-react'
 import React, { useEffect, useState, useRef, useCallback } from 'react'
 
 import { Button } from '@/components/ui/button'
-import {
-  HoverCard,
-  HoverCardContent,
-  HoverCardTrigger,
-} from '@/components/ui/hover-card'
-import { Slider } from '@/components/ui/slider'
 
 import {
   Projector,
   buildProjector,
   projectGazeSample,
 } from '@/lib/gaze-projection'
-import { EventsTimeline } from './video-player/events-timeline'
+import { VideoControls } from './video-player/video-controls'
 
 interface CircleConfig {
   stroke: number
@@ -857,128 +840,30 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         </div>
       ) : null}
 
-      <div className="rounded-lg border bg-card p-3 shadow-sm">
-        <div className="mb-3 flex flex-wrap items-center gap-2">
-          <Button
-            onClick={() => void togglePlayback()}
-            size="sm"
-            className="w-20"
-          >
-            {isPlaying ? <PauseIcon /> : <PlayIcon />}
-            {isPlaying ? 'Pause' : 'Play'}
-          </Button>
-          <Button
-            onClick={() => stepFrame(-1)}
-            size="sm"
-            variant="outline"
-            title="Step backward one frame"
-          >
-            <SkipBackIcon />
-            Frame
-          </Button>
-          <Button
-            onClick={() => stepFrame(1)}
-            size="sm"
-            variant="outline"
-            title="Step forward one frame"
-          >
-            <SkipForwardIcon />
-            Frame
-          </Button>
-          <div className="flex items-center gap-2">
-            <Button
-              onClick={toggleMute}
-              size="sm"
-              variant="outline"
-              title={isMuted || volume === 0 ? 'Unmute' : 'Mute'}
-            >
-              {isMuted || volume === 0 ? <VolumeOffIcon /> : <Volume2Icon />}
-            </Button>
-            <div className="w-28">
-              <Slider
-                min={0}
-                max={1}
-                step={0.01}
-                value={[isMuted ? 0 : volume]}
-                onValueChange={(values) => {
-                  const [nextVolume = 0] = values
-                  updateVolume(nextVolume)
-                }}
-                aria-label="Volume"
-              />
-            </div>
-          </div>
-          <HoverCard openDelay={100} closeDelay={150}>
-            <HoverCardTrigger asChild>
-              <Button
-                size="icon-sm"
-                variant="outline"
-                title={`Playback speed: ${playbackRate}x`}
-                aria-label={`Playback speed: ${playbackRate}x`}
-              >
-                <GaugeIcon />
-              </Button>
-            </HoverCardTrigger>
-            <HoverCardContent className="w-auto p-2" side="top" align="start">
-              <div className="flex items-center gap-1">
-                {PLAYBACK_RATES.map((rate) => (
-                  <Button
-                    key={rate}
-                    onClick={() => updatePlaybackRate(rate)}
-                    size="sm"
-                    variant={playbackRate === rate ? 'default' : 'outline'}
-                    title={`Set playback speed to ${rate}x`}
-                  >
-                    {rate}x
-                  </Button>
-                ))}
-              </div>
-            </HoverCardContent>
-          </HoverCard>
-          <Button
-            onClick={() => void toggleFullscreen()}
-            size="sm"
-            variant="outline"
-            title={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
-          >
-            {isFullscreen ? <MinimizeIcon /> : <MaximizeIcon />}
-            {isFullscreen ? 'Window' : 'Fullscreen'}
-          </Button>
-          <div className="ml-auto text-sm tabular-nums text-muted-foreground">
-            {formatTime(currentTime)} / {formatTime(duration)}
-          </div>
-        </div>
-
-        <div className="mb-3">
-          <Slider
-            min={0}
-            max={duration || 0.001}
-            step={0.001}
-            value={[Math.min(currentTime, duration || 0)]}
-            onValueChange={(values) => {
-              const [nextTime = 0] = values
-              seekToTime(nextTime)
-            }}
-          />
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm font-medium text-muted-foreground">
-            Layers
-          </span>
-          {Array.from(layerRegistryRef.current.values()).map((layer) => (
-            <Button
-              key={layer.id}
-              size="sm"
-              variant={enabledLayers[layer.id] ? 'default' : 'outline'}
-              onClick={() => toggleLayer(layer.id)}
-            >
-              {layer.label}
-            </Button>
-          ))}
-        </div>
-      </div>
-      <EventsTimeline />
+      <VideoControls
+        currentTime={currentTime}
+        duration={duration}
+        enabledLayers={enabledLayers}
+        isFullscreen={isFullscreen}
+        isMuted={isMuted}
+        isPlaying={isPlaying}
+        layers={Array.from(layerRegistryRef.current.values()).map((layer) => ({
+          id: layer.id,
+          label: layer.label,
+        }))}
+        playbackRate={playbackRate}
+        playbackRates={PLAYBACK_RATES}
+        volume={volume}
+        onSeek={seekToTime}
+        onStepFrame={stepFrame}
+        onToggleFullscreen={toggleFullscreen}
+        onToggleLayer={toggleLayer}
+        onToggleMute={toggleMute}
+        onTogglePlayback={togglePlayback}
+        onUpdatePlaybackRate={updatePlaybackRate}
+        onUpdateVolume={updateVolume}
+        formatTime={formatTime}
+      />
     </div>
   )
 }
