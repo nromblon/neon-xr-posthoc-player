@@ -26,6 +26,7 @@ import {
   EmptyTitle,
 } from '@/components/ui/empty'
 import { Button } from '@/components/ui/button'
+import { useEventStore } from '@/store/eventStore'
 
 export const Route = createFileRoute('/')({ component: App })
 
@@ -42,6 +43,7 @@ function App() {
   // File-related states
   // Gaze Data
   const [gazeFile, setGazeFile] = React.useState<File | null>(null)
+  const [eventsFile, setEventsFile] = React.useState<File | null>(null)
   const [shouldShowGazeError, showGazeError] = React.useState(false)
   // Scene Video Data
   const [videoFile, setVideoFile] = React.useState<File | null>(null)
@@ -51,6 +53,7 @@ function App() {
   const [fovHorizontalDeg, setFovHorizontalDeg] = React.useState(82)
 
   const videoRef = useRef<HTMLVideoElement>(null)
+  const clearEvents = useEventStore((state) => state.removeEvents)
 
   // Align-related state
   const [gazeStartMs, setGazeStartMs] = React.useState<number>(0)
@@ -62,6 +65,16 @@ function App() {
     for (let i = 0; i < file.length; i++) {
       const f = file.item(i)
       if (f && f.name.endsWith('gaze.csv')) {
+        return f
+      }
+    }
+    return null
+  }
+
+  const findEventsFile = (file: FileList) => {
+    for (let i = 0; i < file.length; i++) {
+      const f = file.item(i)
+      if (f && f.name.endsWith('events.csv')) {
         return f
       }
     }
@@ -120,6 +133,7 @@ function App() {
           <VideoPlayer
             videoRef={videoRef}
             gazeDataFile={gazeFile}
+            eventsFile={eventsFile}
             videoFile={videoFile}
             xrConfigFile={configFile}
             fovHorizontalDeg={fovHorizontalDeg}
@@ -174,14 +188,18 @@ function App() {
           inputRef={folderPickerRef}
           onPick={(f) => {
             console.log(f)
+            clearEvents()
             const gf = findGazeFile(f)
+            const ef = findEventsFile(f)
             if (gf) {
               setGazeFile(gf)
             }
+            setEventsFile(ef)
 
             console.log(gf)
             if (!gf || f.length === 0) {
               setGazeFile(null)
+              setEventsFile(null)
               showGazeError(true)
               setFolderPickerKey((k) => k + 1)
               if (folderPickerRef.current) {

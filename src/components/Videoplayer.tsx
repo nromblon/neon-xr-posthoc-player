@@ -8,6 +8,7 @@ import {
   projectGazeSample,
 } from '@/lib/gaze-projection'
 import type { Event as AnnotationEvent } from '@/types/annotations'
+import { useEventStore } from '@/store/eventStore'
 import { VideoControls } from './video-player/video-controls'
 
 interface CircleConfig {
@@ -18,6 +19,7 @@ interface CircleConfig {
 
 interface VideoPlayerProps {
   gazeDataFile: File
+  eventsFile: File | null
   videoRef: React.RefObject<HTMLVideoElement | null>
   videoFile: File
   xrConfigFile: File
@@ -86,6 +88,7 @@ function formatTime(seconds: number) {
 
 const VideoPlayer: React.FC<VideoPlayerProps> = ({
   gazeDataFile,
+  eventsFile,
   videoRef,
   videoFile,
   xrConfigFile,
@@ -94,6 +97,9 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   gazeStartMs,
   onFrameDurationChange,
 }) => {
+  const timelineEvents = useEventStore((state) => state.events)
+  const setTimelineEvents = useEventStore((state) => state.setEvents)
+  const clearTimelineEvents = useEventStore((state) => state.removeEvents)
   const containerRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const layerCanvasRefs = useRef<Record<string, HTMLCanvasElement | null>>({})
@@ -123,14 +129,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     useState(false)
   const lastVolumeRef = useRef(1)
   const effectiveVideoDimensions = manualVideoDimensions
-  const timelineEvents: AnnotationEvent[] = [
-    { name: 'recording.begin', timestamp_ns: 0 },
-    {
-      name: 'recording.end',
-      timestamp_ns: Math.max(duration, 0) * 1_000_000_000,
-    },
-  ]
-
   // Draw Layers
   // A stable registry — lives outside the component or as a stable ref
   const layerRegistryRef = useRef<Map<string, OverlayLayer>>(new Map())
@@ -350,6 +348,77 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
     void loadGazeData()
   }, [gazeDataFile])
+
+  useEffect(() => {
+    clearTimelineEvents()
+
+    if (!eventsFile) {
+      return
+    }
+
+    let cancelled = false
+
+    const loadEvents = async () => {
+      const text = await eventsFile.text()
+      const lines = text
+        .split('\n')
+        .map((line) => line.trim())
+        .filter(Boolean)
+
+      if (lines.length < 2) {
+        setTimelineEvents([])
+        return
+      }
+
+      const headers = lines[0].split(',').map((header) => header.trim().toLowerCase())
+      const col = (name: string) => headers.indexOf(name)
+
+      const idxTimestamp = col('timestamp [ns]')
+      const idxName = col('name')
+
+      if (idxTimestamp === -1 || idxName === -1) {
+        console.error('events.csv missing required columns. Found headers:', headers)
+        setTimelineEvents([])
+        return
+      }
+
+      const rawEvents = lines
+        .slice(1)
+        .map((line) => {
+          const cols = line.split(',').map((value) => value.trim())
+          const timestamp_ns = Number(cols[idxTimestamp])
+          const name = cols[idxName] ?? ''
+
+          if (!name || !Number.isFinite(timestamp_ns)) {
+            return null
+          }
+
+          return { name, timestamp_ns }
+        })
+        .filter((event): event is AnnotationEvent => event !== null)
+        .sort((a, b) => a.timestamp_ns - b.timestamp_ns)
+
+      const originTimestamp =
+        rawEvents.find((event) => event.name === 'recording.begin')?.timestamp_ns ??
+        rawEvents[0]?.timestamp_ns
+
+      const normalizedEvents = rawEvents.map((event) => ({
+        ...event,
+        timestamp_ns: Math.max(event.timestamp_ns - (originTimestamp ?? 0), 0),
+      }))
+
+      if (!cancelled) {
+        setTimelineEvents(normalizedEvents)
+      }
+    }
+
+    void loadEvents()
+
+    return () => {
+      cancelled = true
+      clearTimelineEvents()
+    }
+  }, [clearTimelineEvents, eventsFile, setTimelineEvents, gazeDataFile])
 
   // On Video File Change: reset video src and redraw
   useEffect(() => {
