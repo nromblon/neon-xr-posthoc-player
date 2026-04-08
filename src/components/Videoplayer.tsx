@@ -67,6 +67,7 @@ const defaultCircleConfig: CircleConfig = {
 
 const DEFAULT_FRAME_DURATION_SECONDS = 1 / 30
 const PLAYBACK_RATES = [0.5, 1, 1.5, 2] as const
+const NANOSECONDS_PER_MILLISECOND = 1_000_000
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max)
@@ -111,6 +112,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const enabledLayersRef = useRef<Record<string, boolean>>({ gaze: true })
   const drawFrameRef = useRef<(() => void) | null>(null)
   const gazeStartMsRef = useRef(gazeStartMs)
+  const previousTimelineGazeStartMsRef = useRef(gazeStartMs)
   const frameDurationRef = useRef(DEFAULT_FRAME_DURATION_SECONDS)
   const previousFrameTimeRef = useRef<number | null>(null)
   const [isPlaying, setIsPlaying] = useState(false)
@@ -401,13 +403,18 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       const originTimestamp =
         rawEvents.find((event) => event.name === 'recording.begin')?.timestamp_ns ??
         rawEvents[0]?.timestamp_ns
+      const gazeStartOffsetNs = gazeStartMs * NANOSECONDS_PER_MILLISECOND
 
       const normalizedEvents = rawEvents.map((event) => ({
         ...event,
-        timestamp_ns: Math.max(event.timestamp_ns - (originTimestamp ?? 0), 0),
+        timestamp_ns: Math.max(
+          event.timestamp_ns - (originTimestamp ?? 0) + gazeStartOffsetNs,
+          0,
+        ),
       }))
 
       if (!cancelled) {
+        previousTimelineGazeStartMsRef.current = gazeStartMs
         setTimelineEvents(normalizedEvents)
       }
     }
@@ -418,7 +425,26 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       cancelled = true
       clearTimelineEvents()
     }
-  }, [clearTimelineEvents, eventsFile, setTimelineEvents, gazeDataFile])
+  }, [clearTimelineEvents, eventsFile, gazeDataFile, setTimelineEvents])
+
+  useEffect(() => {
+    const previousGazeStartMs = previousTimelineGazeStartMsRef.current
+    const deltaNs =
+      (gazeStartMs - previousGazeStartMs) * NANOSECONDS_PER_MILLISECOND
+
+    if (deltaNs === 0 || timelineEvents.length === 0) {
+      previousTimelineGazeStartMsRef.current = gazeStartMs
+      return
+    }
+
+    setTimelineEvents(
+      timelineEvents.map((event) => ({
+        ...event,
+        timestamp_ns: Math.max(event.timestamp_ns + deltaNs, 0),
+      })),
+    )
+    previousTimelineGazeStartMsRef.current = gazeStartMs
+  }, [gazeStartMs, setTimelineEvents, timelineEvents])
 
   // On Video File Change: reset video src and redraw
   useEffect(() => {

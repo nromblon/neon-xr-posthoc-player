@@ -4,9 +4,11 @@ import React from 'react'
 import { Button } from '@/components/ui/button'
 import { InputGroup, InputGroupInput } from '@/components/ui/input-group'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { useEventStore } from '@/store/eventStore'
 import type { Event as AnnotationEvent } from '@/types/annotations'
 
 const TIMELINE_PLAYHEAD = '#6366f1'
+const LOCKED_EVENT_NAMES = new Set(['recording.begin', 'recording.end'])
 
 export interface VideoEventsTimelineProps {
   currentTime: number
@@ -25,6 +27,22 @@ export const VideoEventsTimeline: React.FC<VideoEventsTimelineProps> = ({
   formatTime,
   onSeek,
 }) => {
+  const addEvent = useEventStore((state) => state.addEvent)
+  const renameEvent = useEventStore((state) => state.renameEvent)
+  const removeEvent = useEventStore((state) => state.removeEvent)
+  const [editingEventName, setEditingEventName] = React.useState<string | null>(
+    null,
+  )
+  const [draftName, setDraftName] = React.useState('')
+  const groupedEvents = Array.from(
+    events.reduce((groups, eventItem) => {
+      const existingGroup = groups.get(eventItem.name) ?? []
+      existingGroup.push(eventItem)
+      groups.set(eventItem.name, existingGroup)
+      return groups
+    }, new Map<string, AnnotationEvent[]>()),
+  )
+
   const timelineGridTemplate = `${eventNameColumnWidthPx}px minmax(0, 1fr)`
   const safeDuration = duration > 0 ? duration : 1
   const playheadPercent =
@@ -122,11 +140,92 @@ export const VideoEventsTimeline: React.FC<VideoEventsTimelineProps> = ({
     seekFromTimelinePointer(event)
   }
 
+  const startEditingEvent = (eventName: string) => {
+    if (LOCKED_EVENT_NAMES.has(eventName)) {
+      return
+    }
+
+    setEditingEventName(eventName)
+    setDraftName(eventName)
+  }
+
+  const stopEditingEvent = () => {
+    setEditingEventName(null)
+    setDraftName('')
+  }
+
+  const commitEventName = (eventName: string) => {
+    if (LOCKED_EVENT_NAMES.has(eventName)) {
+      stopEditingEvent()
+      return
+    }
+
+    const nextName = draftName.trim()
+    if (nextName && nextName !== eventName) {
+      renameEvent(eventName, nextName)
+    }
+    stopEditingEvent()
+  }
+
+  const handleAddEvent = () => {
+    const suggestedName = 'custom.event'
+    const nextName = window.prompt('Enter a name for the new event.', suggestedName)
+
+    if (nextName === null) {
+      return
+    }
+
+    const trimmedName = nextName.trim()
+    if (!trimmedName) {
+      window.alert('Event name cannot be empty.')
+      return
+    }
+
+    if (LOCKED_EVENT_NAMES.has(trimmedName)) {
+      window.alert(`"${trimmedName}" is reserved and cannot be created manually.`)
+      return
+    }
+
+    addEvent({
+      name: trimmedName,
+      timestamp_ns: Math.round(currentTime * 1_000_000_000),
+    })
+  }
+
+  const handleDeleteEvent = (
+    pointerEvent: React.MouseEvent<HTMLDivElement>,
+    eventItem: AnnotationEvent,
+  ) => {
+    pointerEvent.preventDefault()
+    pointerEvent.stopPropagation()
+
+    if (LOCKED_EVENT_NAMES.has(eventItem.name)) {
+      return
+    }
+
+    const shouldDelete = window.confirm(
+      `Delete "${eventItem.name}" at ${formatTime(
+        eventItem.timestamp_ns / 1_000_000_000,
+      )}?`,
+    )
+
+    if (!shouldDelete) {
+      return
+    }
+
+    removeEvent(eventItem.timestamp_ns)
+  }
+
   return (
     <div className="p-3">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-3">
-          <Button variant="outline" size="sm" className="text-xs">
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-xs"
+            onClick={handleAddEvent}
+          >
             + Add Event
           </Button>
         </div>
@@ -274,6 +373,14 @@ export const VideoEventsTimeline: React.FC<VideoEventsTimelineProps> = ({
                         key={`head-${eventItem.name}-${eventItem.timestamp_ns}`}
                         className="absolute inset-y-0 flex -translate-x-1/2 items-center"
                         style={{ left: eventLeft }}
+                        onContextMenu={(pointerEvent) =>
+                          handleDeleteEvent(pointerEvent, eventItem)
+                        }
+                        title={
+                          LOCKED_EVENT_NAMES.has(eventItem.name)
+                            ? eventItem.name
+                            : 'Right-click to delete this event'
+                        }
                       >
                         <div className="h-2 w-2 rotate-45 border border-foreground/70 bg-background" />
                       </div>
@@ -284,33 +391,85 @@ export const VideoEventsTimeline: React.FC<VideoEventsTimelineProps> = ({
               </div>
             </div>
 
-            {events.map((eventItem) => {
-              const eventTimeSeconds = Math.min(
-                Math.max(eventItem.timestamp_ns / 1_000_000_000, 0),
-                safeDuration,
-              )
-              const eventLeft = `${(eventTimeSeconds / safeDuration) * 100}%`
+            {groupedEvents.map(([eventName, eventItems]) => {
 
               return (
               <div
-                key={`${eventItem.name}-${eventItem.timestamp_ns}`}
-                // className="grid min-h-12 border-b last:border-b-0"
+                key={eventName}
                 className="grid min-h-12 border-b"
                 style={{ gridTemplateColumns: timelineGridTemplate }}
               >
-                <div className="border-r px-4 py-3 text-sm">{eventItem.name}</div>
+                <div className="border-r px-4 py-3 text-sm">
+                  {editingEventName === eventName ? (
+                    <input
+                      autoFocus
+                      value={draftName}
+                      onBlur={() => commitEventName(eventName)}
+                      onChange={(inputEvent) =>
+                        setDraftName(inputEvent.target.value)
+                      }
+                      onKeyDown={(keyboardEvent) => {
+                        if (keyboardEvent.key === 'Enter') {
+                          commitEventName(eventName)
+                        }
+
+                        if (keyboardEvent.key === 'Escape') {
+                          stopEditingEvent()
+                        }
+                      }}
+                      className="w-full rounded-sm border bg-background px-2 py-1 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => startEditingEvent(eventName)}
+                      disabled={LOCKED_EVENT_NAMES.has(eventName)}
+                      className={`w-full truncate text-left ${
+                        LOCKED_EVENT_NAMES.has(eventName)
+                          ? 'cursor-not-allowed text-muted-foreground'
+                          : 'cursor-text'
+                      }`}
+                      title={
+                        LOCKED_EVENT_NAMES.has(eventName)
+                          ? 'This event name is locked'
+                          : 'Click to rename event'
+                      }
+                    >
+                      {eventName}
+                    </button>
+                  )}
+                </div>
                 <div className="relative px-4 py-3">
                   <div
                     className="relative h-7 cursor-pointer rounded-sm border bg-muted/10"
                     onPointerDown={handleTimelinePointerDown}
                     onPointerMove={handleTimelinePointerMove}
                   >
-                    <div
-                      className="absolute inset-y-0 flex -translate-x-1/2 items-center"
-                      style={{ left: eventLeft }}
-                    >
-                      <div className="h-2 w-2 rotate-45 border border-foreground/70 bg-background" />
-                    </div>
+                    {eventItems.map((eventItem) => {
+                      const eventTimeSeconds = Math.min(
+                        Math.max(eventItem.timestamp_ns / 1_000_000_000, 0),
+                        safeDuration,
+                      )
+                      const eventLeft = `${(eventTimeSeconds / safeDuration) * 100}%`
+
+                      return (
+                        <div
+                          key={`${eventItem.name}-${eventItem.timestamp_ns}`}
+                          className="absolute inset-y-0 flex -translate-x-1/2 items-center"
+                          style={{ left: eventLeft }}
+                          onContextMenu={(pointerEvent) =>
+                            handleDeleteEvent(pointerEvent, eventItem)
+                          }
+                          title={
+                            LOCKED_EVENT_NAMES.has(eventItem.name)
+                              ? eventItem.name
+                              : 'Right-click to delete this event'
+                          }
+                        >
+                          <div className="h-2 w-2 rotate-45 border border-foreground/70 bg-background" />
+                        </div>
+                      )
+                    })}
                     {renderPlayhead()}
                   </div>
                 </div>
