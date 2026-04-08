@@ -159,7 +159,7 @@ export const VideoEventsTimeline: React.FC<VideoEventsTimelineProps> = ({
 
         <ScrollArea className="h-80">
           <div>
-            <div
+            {/* <div
               className="sticky top-0 z-10 grid min-h-14 border-b bg-background"
               style={{ gridTemplateColumns: timelineGridTemplate }}
             >
@@ -188,7 +188,7 @@ export const VideoEventsTimeline: React.FC<VideoEventsTimelineProps> = ({
                   {renderPlayhead()}
                 </div>
               </div>
-            </div>
+            </div> */}
 
             <div
               className="grid min-h-20 border-b"
@@ -215,7 +215,7 @@ export const VideoEventsTimeline: React.FC<VideoEventsTimelineProps> = ({
                 </div>
               </div>
             </div>
-
+{/* 
             <div
               className="grid min-h-20 border-b"
               style={{ gridTemplateColumns: timelineGridTemplate }}
@@ -240,7 +240,7 @@ export const VideoEventsTimeline: React.FC<VideoEventsTimelineProps> = ({
                   {renderPlayhead()}
                 </div>
               </div>
-            </div>
+            </div> */}
 
             <div
               className="grid min-h-14 border-b"
@@ -262,6 +262,23 @@ export const VideoEventsTimeline: React.FC<VideoEventsTimelineProps> = ({
                       style={{ left: tick.left }}
                     />
                   ))}
+                  {events.map((eventItem) => {
+                    const eventTimeSeconds = Math.min(
+                      Math.max(eventItem.timestamp_ns / 1_000_000_000, 0),
+                      safeDuration,
+                    )
+                    const eventLeft = `${(eventTimeSeconds / safeDuration) * 100}%`
+
+                    return (
+                      <div
+                        key={`head-${eventItem.name}-${eventItem.timestamp_ns}`}
+                        className="absolute inset-y-0 flex -translate-x-1/2 items-center"
+                        style={{ left: eventLeft }}
+                      >
+                        <div className="h-2 w-2 rotate-45 border border-foreground/70 bg-background" />
+                      </div>
+                    )
+                  })}
                   {renderPlayhead()}
                 </div>
               </div>
@@ -277,7 +294,8 @@ export const VideoEventsTimeline: React.FC<VideoEventsTimelineProps> = ({
               return (
               <div
                 key={`${eventItem.name}-${eventItem.timestamp_ns}`}
-                className="grid min-h-12 border-b last:border-b-0"
+                // className="grid min-h-12 border-b last:border-b-0"
+                className="grid min-h-12 border-b"
                 style={{ gridTemplateColumns: timelineGridTemplate }}
               >
                 <div className="border-r px-4 py-3 text-sm">{eventItem.name}</div>
