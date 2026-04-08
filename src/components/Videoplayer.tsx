@@ -230,6 +230,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
           projectedPoint.x === null ||
           projectedPoint.y === null
         ) {
+          console.log('Invalid gaze projection for point:', point)
+          console.log('projected point values:', projectedPoint)
           context.clearRect(0, 0, canvas.width, canvas.height)
           drawNoGaze('Invalid projected gaze point')
           return

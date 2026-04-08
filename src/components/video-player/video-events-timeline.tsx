@@ -190,7 +190,7 @@ export const VideoEventsTimeline: React.FC<VideoEventsTimelineProps> = ({
               </div>
             </div> */}
 
-            <div
+            {/* <div
               className="grid min-h-20 border-b"
               style={{ gridTemplateColumns: timelineGridTemplate }}
             >
@@ -214,7 +214,7 @@ export const VideoEventsTimeline: React.FC<VideoEventsTimelineProps> = ({
                   {renderPlayhead()}
                 </div>
               </div>
-            </div>
+            </div> */}
 {/* 
             <div
               className="grid min-h-20 border-b"
