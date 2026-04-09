@@ -31,10 +31,13 @@ export const VideoEventsTimeline: React.FC<VideoEventsTimelineProps> = ({
   const addEvent = useEventStore((state) => state.addEvent)
   const renameEvent = useEventStore((state) => state.renameEvent)
   const removeEvent = useEventStore((state) => state.removeEvent)
+  const [addingEvent, setAddingEvent] = React.useState(false)
   const [editingEventName, setEditingEventName] = React.useState<string | null>(
     null,
   )
   const [draftName, setDraftName] = React.useState('')
+  const newEventRowRef = React.useRef<HTMLDivElement>(null)
+
   const groupedEvents = Array.from(
     events.reduce((groups, eventItem) => {
       const existingGroup = groups.get(eventItem.name) ?? []
@@ -169,16 +172,45 @@ export const VideoEventsTimeline: React.FC<VideoEventsTimelineProps> = ({
   }
 
   const handleAddEvent = () => {
-    const suggestedName = 'custom.event'
-    const nextName = window.prompt('Enter a name for the new event.', suggestedName)
+    setAddingEvent(true)
+    setDraftName("")
+    setEditingEventName("")
 
-    if (nextName === null) {
+    // const suggestedName = 'custom.event'
+    // const nextName = window.prompt('Enter a name for the new event.', suggestedName)
+
+    // if (nextName === null) {
+    //   return
+    // }
+
+    // const trimmedName = nextName.trim()
+    // if (!trimmedName) {
+    //   window.alert('Event name cannot be empty.')
+    //   return
+    // }
+
+    // if (LOCKED_EVENT_NAMES.has(trimmedName)) {
+    //   window.alert(`"${trimmedName}" is reserved and cannot be created manually.`)
+    //   return
+    // }
+
+    // addEvent({
+    //   name: trimmedName,
+    //   timestamp_ns: Math.round(currentTime * 1_000_000_000),
+    // })
+
+  }
+
+  const handleAddEventFinish = () => {
+    setAddingEvent(false)
+    if (draftName === '') {
       return
     }
 
-    const trimmedName = nextName.trim()
+    const trimmedName = draftName.trim()
+    setDraftName('')
+
     if (!trimmedName) {
-      window.alert('Event name cannot be empty.')
       return
     }
 
@@ -191,10 +223,6 @@ export const VideoEventsTimeline: React.FC<VideoEventsTimelineProps> = ({
       name: trimmedName,
       timestamp_ns: Math.round(currentTime * 1_000_000_000),
     })
-  }
-
-  const handleAddEventFinish = () => {
-
   }
 
   const handleDeleteEvent = (
@@ -417,6 +445,30 @@ export const VideoEventsTimeline: React.FC<VideoEventsTimelineProps> = ({
               />
             ))}
             {/* New events get added here  */}
+            {addingEvent && (
+              <EventRow
+                draftName={draftName}
+                editingEventName={editingEventName}
+                eventName={""}
+                eventNameColumnWidthPx={eventNameColumnWidthPx}
+                eventItems={[
+                  {
+                    timestamp_ns: Math.round(currentTime * 1_000_000_000),
+                    name: draftName,
+                  } as AnnotationEvent
+                ]}
+                isLocked={false}
+                onCommitEventName={handleAddEventFinish}
+                onDeleteEvent={() => {}}
+                onSetDraftName={setDraftName}
+                onStartEditingEvent={startEditingEvent}
+                onStopEditingEvent={stopEditingEvent}
+                onTimelinePointerDown={() => {}}
+                onTimelinePointerMove={() => {}}
+                playhead={renderPlayhead()}
+                safeDuration={safeDuration}
+              />
+            )}
           </div>
         </ScrollArea>
       </div>
