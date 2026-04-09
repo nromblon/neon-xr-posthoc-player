@@ -26,6 +26,7 @@ import {
   EmptyTitle,
 } from '@/components/ui/empty'
 import { Button } from '@/components/ui/button'
+import { writeEventsCsv } from '@/lib/utils'
 import { useEventStore } from '@/store/eventStore'
 
 export const Route = createFileRoute('/')({ component: App })
@@ -44,6 +45,8 @@ function App() {
   // Gaze Data
   const [gazeFile, setGazeFile] = React.useState<File | null>(null)
   const [eventsFile, setEventsFile] = React.useState<File | null>(null)
+  const [eventsDirectoryHandle, setEventsDirectoryHandle] =
+    React.useState<FileSystemDirectoryHandle | null>(null)
   const [shouldShowGazeError, showGazeError] = React.useState(false)
   // Scene Video Data
   const [videoFile, setVideoFile] = React.useState<File | null>(null)
@@ -54,8 +57,10 @@ function App() {
 
   const videoRef = useRef<HTMLVideoElement>(null)
   const clearEvents = useEventStore((state) => state.removeEvents)
+  const events = useEventStore((state) => state.events)
   const gazeStartMs = useEventStore((state) => state.gazeStartTime)
   const setGazeStartTimeInStore = useEventStore((state) => state.setGazeStartTime)
+  const hasSkippedInitialEventsWriteRef = React.useRef(false)
 
   // Align-related state
   const [frameDurationMs, setFrameDurationMs] = React.useState<number>(
@@ -124,6 +129,31 @@ function App() {
     setGazeStartTime(gazeStartMs + direction * frameDurationMs)
   }
 
+  React.useEffect(() => {
+    hasSkippedInitialEventsWriteRef.current = false
+  }, [eventsDirectoryHandle])
+
+  React.useEffect(() => {
+    if (!eventsDirectoryHandle) {
+      return
+    }
+
+    if (!hasSkippedInitialEventsWriteRef.current) {
+      hasSkippedInitialEventsWriteRef.current = true
+      return
+    }
+
+    const syncEventsFile = async () => {
+      try {
+        await writeEventsCsv(eventsDirectoryHandle, events)
+      } catch (error) {
+        console.error('Failed to update events.csv:', error)
+      }
+    }
+
+    void syncEventsFile()
+  }, [events, eventsDirectoryHandle])
+
   return (
     <div className="display flex justify-between items-start my-4">
       <div
@@ -186,9 +216,10 @@ function App() {
         <FolderPicker
           key={folderPickerKey}
           inputRef={folderPickerRef}
-          onPick={(f) => {
+          onPick={(f, _folderName, directoryHandle) => {
             console.log(f)
             clearEvents()
+            setEventsDirectoryHandle(directoryHandle ?? null)
             const gf = findGazeFile(f)
             const ef = findEventsFile(f)
             if (gf) {

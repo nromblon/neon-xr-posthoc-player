@@ -5,7 +5,11 @@ import { InputGroup, InputGroupAddon } from '@/components/ui/input-group'
 import { cn } from '@/lib/utils'
 
 type FolderInputProps = {
-  onPick?: (files: FileList, folderName: string) => void
+  onPick?: (
+    files: FileList,
+    folderName: string,
+    directoryHandle?: FileSystemDirectoryHandle,
+  ) => void
   placeholder?: string
   buttonLabel?: string
   className?: string
@@ -23,6 +27,43 @@ export function FolderPicker({
     inputRef = React.useRef<HTMLInputElement>(null)
   }
   const [label, setLabel] = React.useState(placeholder)
+
+  const pickWithDirectoryHandle = async () => {
+    if (typeof window === 'undefined' || !('showDirectoryPicker' in window)) {
+      inputRef.current?.click()
+      return
+    }
+
+    try {
+      const directoryHandle = await window.showDirectoryPicker()
+      const files: File[] = []
+
+      for await (const entry of directoryHandle.values()) {
+        if (entry.kind !== 'file') {
+          continue
+        }
+
+        files.push(await entry.getFile())
+      }
+
+      if (files.length === 0) {
+        setLabel(placeholder)
+        return
+      }
+
+      const dataTransfer = new DataTransfer()
+      for (const file of files) {
+        dataTransfer.items.add(file)
+      }
+
+      setLabel(directoryHandle.name)
+      onPick?.(dataTransfer.files, directoryHandle.name, directoryHandle)
+    } catch (error) {
+      if ((error as DOMException)?.name !== 'AbortError') {
+        console.error('Failed to pick directory:', error)
+      }
+    }
+  }
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files
@@ -53,7 +94,7 @@ export function FolderPicker({
         onChange={handleChange}
       />
 
-      <InputGroup onClick={() => inputRef.current?.click()}>
+      <InputGroup onClick={() => void pickWithDirectoryHandle()}>
         <InputGroupAddon align="inline-start">
           <span className="text-foreground inline-flex w-23 shrink-0 justify-center whitespace-nowrap">
             {buttonLabel}
