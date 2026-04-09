@@ -25,7 +25,6 @@ interface VideoPlayerProps {
   xrConfigFile: File
   fovHorizontalDeg: number
   circleConfig: CircleConfig
-  gazeStartMs: number
   onFrameDurationChange?: (frameDurationSeconds: number) => void
 }
 
@@ -95,12 +94,15 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   xrConfigFile,
   fovHorizontalDeg,
   circleConfig = defaultCircleConfig,
-  gazeStartMs,
   onFrameDurationChange,
 }) => {
   const timelineEvents = useEventStore((state) => state.events)
+  const gazeStartMs = useEventStore((state) => state.gazeStartTime)
   const setTimelineEvents = useEventStore((state) => state.setEvents)
   const clearTimelineEvents = useEventStore((state) => state.removeEvents)
+  const setEventOriginTimestampNs = useEventStore(
+    (state) => state.setEventOriginTimestampNs,
+  )
   const containerRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const layerCanvasRefs = useRef<Record<string, HTMLCanvasElement | null>>({})
@@ -368,6 +370,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         .filter(Boolean)
 
       if (lines.length < 2) {
+        setEventOriginTimestampNs(0)
         setTimelineEvents([])
         return
       }
@@ -380,6 +383,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
       if (idxTimestamp === -1 || idxName === -1) {
         console.error('events.csv missing required columns. Found headers:', headers)
+        setEventOriginTimestampNs(0)
         setTimelineEvents([])
         return
       }
@@ -388,14 +392,18 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         .slice(1)
         .map((line) => {
           const cols = line.split(',').map((value) => value.trim())
-          const timestamp_ns = Number(cols[idxTimestamp])
+          const utx_timestamp_ns = Number(cols[idxTimestamp])
           const name = cols[idxName] ?? ''
 
-          if (!name || !Number.isFinite(timestamp_ns)) {
+          if (!name || !Number.isFinite(utx_timestamp_ns)) {
             return null
           }
 
-          return { name, timestamp_ns }
+          return {
+            name,
+            timestamp_ns: utx_timestamp_ns,
+            utx_timestamp_ns,
+          }
         })
         .filter((event): event is AnnotationEvent => event !== null)
         .sort((a, b) => a.timestamp_ns - b.timestamp_ns)
@@ -415,6 +423,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
       if (!cancelled) {
         previousTimelineGazeStartMsRef.current = gazeStartMs
+        setEventOriginTimestampNs(originTimestamp ?? 0)
         setTimelineEvents(normalizedEvents)
       }
     }
@@ -423,9 +432,16 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
     return () => {
       cancelled = true
+      setEventOriginTimestampNs(0)
       clearTimelineEvents()
     }
-  }, [clearTimelineEvents, eventsFile, gazeDataFile, setTimelineEvents])
+  }, [
+    clearTimelineEvents,
+    eventsFile,
+    gazeDataFile,
+    setEventOriginTimestampNs,
+    setTimelineEvents,
+  ])
 
   useEffect(() => {
     const previousGazeStartMs = previousTimelineGazeStartMsRef.current

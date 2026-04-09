@@ -54,9 +54,10 @@ function App() {
 
   const videoRef = useRef<HTMLVideoElement>(null)
   const clearEvents = useEventStore((state) => state.removeEvents)
+  const gazeStartMs = useEventStore((state) => state.gazeStartTime)
+  const setGazeStartTimeInStore = useEventStore((state) => state.setGazeStartTime)
 
   // Align-related state
-  const [gazeStartMs, setGazeStartMs] = React.useState<number>(0)
   const [frameDurationMs, setFrameDurationMs] = React.useState<number>(
     DEFAULT_FRAME_DURATION_MS,
   )
@@ -99,7 +100,7 @@ function App() {
   const setGazeStartTime = (nextGazeStartMs: number) => {
     const boundedGazeStartMs = Math.max(0, Math.round(nextGazeStartMs))
     updateGazeStartInputs(boundedGazeStartMs)
-    setGazeStartMs(boundedGazeStartMs)
+    setGazeStartTimeInStore(boundedGazeStartMs)
   }
 
   const setCurrentTimeAsGazeStart = () => {
@@ -116,7 +117,7 @@ function App() {
     const seconds = parseInt(secInput.value) || 0
     const milliseconds = parseInt(msInput.value) || 0
     const totalMs = minutes * 60 * 1000 + seconds * 1000 + milliseconds
-    setGazeStartMs(totalMs)
+    setGazeStartTime(totalMs)
   }
 
   const shiftGazeStartByFrame = (direction: 1 | -1) => {
@@ -138,7 +139,6 @@ function App() {
             xrConfigFile={configFile}
             fovHorizontalDeg={fovHorizontalDeg}
             circleConfig={{ stroke, radius, color }}
-            gazeStartMs={gazeStartMs}
             onFrameDurationChange={(frameDurationSeconds) => {
               if (frameDurationSeconds > 0) {
                 setFrameDurationMs(frameDurationSeconds * 1000)

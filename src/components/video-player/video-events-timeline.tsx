@@ -29,6 +29,10 @@ export const VideoEventsTimeline: React.FC<VideoEventsTimelineProps> = ({
   onSeek,
 }) => {
   const addEvent = useEventStore((state) => state.addEvent)
+  const gazeStartTime = useEventStore((state) => state.gazeStartTime)
+  const eventOriginTimestampNs = useEventStore(
+    (state) => state.eventOriginTimestampNs,
+  )
   const renameEvent = useEventStore((state) => state.renameEvent)
   const removeEvent = useEventStore((state) => state.removeEvent)
   const [addingEvent, setAddingEvent] = React.useState(false)
@@ -36,7 +40,6 @@ export const VideoEventsTimeline: React.FC<VideoEventsTimelineProps> = ({
     null,
   )
   const [draftName, setDraftName] = React.useState('')
-  const newEventRowRef = React.useRef<HTMLDivElement>(null)
 
   const groupedEvents = Array.from(
     events.reduce((groups, eventItem) => {
@@ -175,30 +178,6 @@ export const VideoEventsTimeline: React.FC<VideoEventsTimelineProps> = ({
     setAddingEvent(true)
     setDraftName("")
     setEditingEventName("")
-
-    // const suggestedName = 'custom.event'
-    // const nextName = window.prompt('Enter a name for the new event.', suggestedName)
-
-    // if (nextName === null) {
-    //   return
-    // }
-
-    // const trimmedName = nextName.trim()
-    // if (!trimmedName) {
-    //   window.alert('Event name cannot be empty.')
-    //   return
-    // }
-
-    // if (LOCKED_EVENT_NAMES.has(trimmedName)) {
-    //   window.alert(`"${trimmedName}" is reserved and cannot be created manually.`)
-    //   return
-    // }
-
-    // addEvent({
-    //   name: trimmedName,
-    //   timestamp_ns: Math.round(currentTime * 1_000_000_000),
-    // })
-
   }
 
   const handleAddEventFinish = () => {
@@ -219,9 +198,16 @@ export const VideoEventsTimeline: React.FC<VideoEventsTimelineProps> = ({
       return
     }
 
+    const timelineTimestampNs = Math.round(currentTime * 1_000_000_000)
+    const gazeStartOffsetNs = Math.round(gazeStartTime * 1_000_000)
+
     addEvent({
       name: trimmedName,
-      timestamp_ns: Math.round(currentTime * 1_000_000_000),
+      timestamp_ns: timelineTimestampNs,
+      utx_timestamp_ns: Math.max(
+        timelineTimestampNs - gazeStartOffsetNs + eventOriginTimestampNs,
+        0,
+      ),
     })
   }
 
@@ -454,6 +440,12 @@ export const VideoEventsTimeline: React.FC<VideoEventsTimelineProps> = ({
                 eventItems={[
                   {
                     timestamp_ns: Math.round(currentTime * 1_000_000_000),
+                    utx_timestamp_ns: Math.max(
+                      Math.round(currentTime * 1_000_000_000) -
+                        Math.round(gazeStartTime * 1_000_000) +
+                        eventOriginTimestampNs,
+                      0,
+                    ),
                     name: draftName,
                   } as AnnotationEvent
                 ]}
