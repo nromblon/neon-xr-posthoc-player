@@ -30,6 +30,7 @@ export const VideoEventsTimeline: React.FC<VideoEventsTimelineProps> = ({
 }) => {
   const addEvent = useEventStore((state) => state.addEvent)
   const gazeStartTime = useEventStore((state) => state.gazeStartTime)
+  const recordingId = useEventStore((state) => state.recordingId)
   const eventOriginTimestampNs = useEventStore(
     (state) => state.eventOriginTimestampNs,
   )
@@ -202,6 +203,8 @@ export const VideoEventsTimeline: React.FC<VideoEventsTimelineProps> = ({
     const gazeStartOffsetNs = Math.round(gazeStartTime * 1_000_000)
 
     addEvent({
+      recording_id: recordingId,
+      type: "posthoc player",
       name: trimmedName,
       timestamp_ns: timelineTimestampNs,
       utx_timestamp_ns: Math.max(

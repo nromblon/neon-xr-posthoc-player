@@ -12,10 +12,10 @@ export function serializeEventsCsv(eventItems: AnnotationEvent[]) {
     .sort((a, b) => a.utx_timestamp_ns - b.utx_timestamp_ns)
     .map(
       (eventItem) =>
-        `${eventItem.utx_timestamp_ns},${JSON.stringify(eventItem.name)}`,
+        `${eventItem.recording_id},${eventItem.utx_timestamp_ns},${JSON.stringify(eventItem.name)},${JSON.stringify(eventItem.type)}`,
     )
 
-  return ['timestamp [ns],name', ...rows].join('\r\n')
+  return ['recording id,timestamp [ns],name,type', ...rows].join('\r\n')
 }
 
 export async function writeEventsCsv(

@@ -103,6 +103,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const setEventOriginTimestampNs = useEventStore(
     (state) => state.setEventOriginTimestampNs,
   )
+  const setRecordingId = useEventStore((state) => state.setRecordingId)
   const containerRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const layerCanvasRefs = useRef<Record<string, HTMLCanvasElement | null>>({})
@@ -378,6 +379,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       const headers = lines[0].split(',').map((header) => header.trim().toLowerCase())
       const col = (name: string) => headers.indexOf(name)
 
+      const idxRecordingId = col('recording id')
+      const idxType = col('type')
       const idxTimestamp = col('timestamp [ns]')
       const idxName = col('name')
 
@@ -387,6 +390,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         setTimelineEvents([])
         return
       }
+
+      setRecordingId(lines[1].split(',')[idxRecordingId] ?? '')
 
       const rawEvents = lines
         .slice(1)
@@ -400,6 +405,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
           }
 
           return {
+            recording_id: cols[idxRecordingId] ?? '',
+            type: cols[idxType] ?? '',
             name,
             timestamp_ns: utx_timestamp_ns,
             utx_timestamp_ns,
