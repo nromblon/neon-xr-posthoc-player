@@ -1,29 +1,14 @@
-import {
-  GaugeIcon,
-  MaximizeIcon,
-  MinimizeIcon,
-  PauseIcon,
-  PlayIcon,
-  SkipBackIcon,
-  SkipForwardIcon,
-  Volume2Icon,
-  VolumeOffIcon,
-} from 'lucide-react'
 import React, { useEffect, useState, useRef, useCallback } from 'react'
 
 import { Button } from '@/components/ui/button'
-import {
-  HoverCard,
-  HoverCardContent,
-  HoverCardTrigger,
-} from '@/components/ui/hover-card'
-import { Slider } from '@/components/ui/slider'
 
 import {
   Projector,
   buildProjector,
   projectGazeSample,
 } from '@/lib/gaze-projection'
+import { useEventStore } from '@/store/eventStore'
+import { VideoControls } from './video-player/video-controls'
 
 interface CircleConfig {
   stroke: number
@@ -38,7 +23,7 @@ interface VideoPlayerProps {
   xrConfigFile: File
   fovHorizontalDeg: number
   circleConfig: CircleConfig
-  gazeStartMs: number
+  isSavingEvents: boolean
   onFrameDurationChange?: (frameDurationSeconds: number) => void
 }
 
@@ -65,6 +50,11 @@ interface OverlayLayer {
   id: string
   label: string
   draw: (state: OverlayRenderState) => void
+}
+
+interface VideoDimensions {
+  width: number
+  height: number
 }
 
 const defaultCircleConfig: CircleConfig = {
@@ -101,9 +91,11 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   xrConfigFile,
   fovHorizontalDeg,
   circleConfig = defaultCircleConfig,
-  gazeStartMs,
+  isSavingEvents,
   onFrameDurationChange,
 }) => {
+  const timelineEvents = useEventStore((state) => state.events)
+  const gazeStartMs = useEventStore((state) => state.gazeStartTime)
   const containerRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const layerCanvasRefs = useRef<Record<string, HTMLCanvasElement | null>>({})
@@ -122,13 +114,18 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [duration, setDuration] = useState(0)
   const [isMuted, setIsMuted] = useState(false)
   const [volume, setVolume] = useState(1)
-  const [playbackRate, setPlaybackRate] = useState<(typeof PLAYBACK_RATES)[number]>(1)
+  const [playbackRate, setPlaybackRate] =
+    useState<(typeof PLAYBACK_RATES)[number]>(1)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [enabledLayers, setEnabledLayers] = useState<Record<string, boolean>>({
     gaze: true,
   })
+  const [manualVideoDimensions, setManualVideoDimensions] =
+    useState<VideoDimensions | null>(null)
+  const [needsManualVideoDimensions, setNeedsManualVideoDimensions] =
+    useState(false)
   const lastVolumeRef = useRef(1)
-
+  const effectiveVideoDimensions = manualVideoDimensions
   // Draw Layers
   // A stable registry — lives outside the component or as a stable ref
   const layerRegistryRef = useRef<Map<string, OverlayLayer>>(new Map())
@@ -223,25 +220,13 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
           point.azimuthDeg,
           point.elevationDeg,
         )
-
-        console.log(
-          'Drawing gaze point for video time',
-          video.currentTime,
-          's:',
-          {
-            rawGazeX: point.gazeX,
-            rawGazeY: point.gazeY,
-            azimuthDeg: point.azimuthDeg,
-            elevationDeg: point.elevationDeg,
-            projectedX: projectedPoint.x,
-            projectedY: projectedPoint.y,
-          },
-        )
         if (
           !projectedPoint.valid ||
           projectedPoint.x === null ||
           projectedPoint.y === null
         ) {
+          console.log('Invalid gaze projection for point:', point)
+          console.log('projected point values:', projectedPoint)
           context.clearRect(0, 0, canvas.width, canvas.height)
           drawNoGaze('Invalid projected gaze point')
           return
@@ -364,80 +349,92 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   // On Video File Change: reset video src and redraw
   useEffect(() => {
     const url = URL.createObjectURL(videoFile)
+    setManualVideoDimensions(null)
+    setNeedsManualVideoDimensions(false)
     if (videoRef.current) {
       videoRef.current.src = url
+      videoRef.current.load()
     }
     return () => {
       URL.revokeObjectURL(url)
     }
   }, [videoFile])
 
-  // // On Gaze Setup Change: rebuild projector with new config and redraw
-  // useEffect(() => {
-  //   const video = videoRef.current;
-  //   if (!video) return;
-
-  //   // Build Gaze Projector
-  //   gazeProjectorRef.current = null;
-
-  //   const loadConfig = async () => {
-  //     try {
-  //       const videoParams : VideoParams = {
-  //         videoWidth: video.videoWidth || 1600,
-  //         videoHeight: video.videoHeight || 1200,
-  //         fovHorizontalDeg: 90, // Assuming a default FOV; ideally this should come from the config or be user-specified
-  //       };
-
-  //       const text = await xrConfigFile.text();
-  //       const config = JSON.parse(text);
-  //       const projector = buildProjector(config, videoParams);
-  //       gazeProjectorRef.current = projector;
-
-  //       console.log('Gaze projector built with config:', config, 'and video params:', videoParams);
-
-  //     } catch (error) {
-  //       console.error('Failed to load or parse XR config file:', error);
-  //     }
-  //   };
-
-  //   loadConfig();
-  // }, [xrConfigFile]);
-
   // On XR Config Change: rebuild projector with new config and redraw (also depends on video metadata for dimensions)
   useEffect(() => {
     const video = videoRef.current
     if (!video) return
 
+    let cancelled = false
+    let buildAttemptId = 0
+
     gazeProjectorRef.current = null
+    drawFrameRef.current?.()
 
-    const buildFromVideo = async () => {
-      if (!video.videoWidth || !video.videoHeight) return // guard: metadata not ready
+    const tryBuildProjector = () => {
+      const videoWidth = manualVideoDimensions?.width ?? video.videoWidth
+      const videoHeight = manualVideoDimensions?.height ?? video.videoHeight
 
-      try {
-        const text = await xrConfigFile.text()
-        const config = JSON.parse(text)
+      if (!videoWidth || !videoHeight) {
+        return
+      }
 
-        const projector = buildProjector(config, {
-          videoWidth: video.videoWidth,
-          videoHeight: video.videoHeight,
-          fovHorizontalDeg: fovHorizontalDeg,
-        })
-        gazeProjectorRef.current = projector
-        drawFrameRef.current?.()
-      } catch (e) {
-        console.error('Failed to build projector:', e)
+      const currentAttemptId = ++buildAttemptId
+
+      void (async () => {
+        try {
+          const text = await xrConfigFile.text()
+          if (cancelled || currentAttemptId !== buildAttemptId) {
+            return
+          }
+
+          const config = JSON.parse(text)
+          const projector = buildProjector(config, {
+            videoWidth,
+            videoHeight,
+            fovHorizontalDeg,
+          })
+
+          gazeProjectorRef.current = projector
+          setNeedsManualVideoDimensions(false)
+          drawFrameRef.current?.()
+        } catch (e) {
+          if (!cancelled) {
+            console.error('Failed to build projector:', e)
+          }
+        }
+      })()
+    }
+
+    const readinessEvents = [
+      'loadedmetadata',
+      'loadeddata',
+      'canplay',
+      'durationchange',
+      'resize',
+    ] as const
+
+    for (const eventName of readinessEvents) {
+      video.addEventListener(eventName, tryBuildProjector)
+    }
+
+    if (video.readyState >= HTMLMediaElement.HAVE_METADATA) {
+      tryBuildProjector()
+    }
+
+    return () => {
+      cancelled = true
+      for (const eventName of readinessEvents) {
+        video.removeEventListener(eventName, tryBuildProjector)
       }
     }
-
-    // If metadata already loaded (e.g. file was already set), build immediately
-    if (video.videoWidth && video.videoHeight) {
-      void buildFromVideo()
-    }
-
-    // Otherwise wait for it
-    video.addEventListener('loadedmetadata', buildFromVideo)
-    return () => video.removeEventListener('loadedmetadata', buildFromVideo)
-  }, [fovHorizontalDeg, xrConfigFile]) // depends on video metadata and config file
+  }, [
+    fovHorizontalDeg,
+    manualVideoDimensions,
+    videoFile,
+    videoRef,
+    xrConfigFile,
+  ]) // depends on source, metadata, and config
 
   // On Enabled Layers Change: redraw with new layer visibility
   useEffect(() => {
@@ -467,7 +464,10 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     let frameCallbackId: number | null = null
 
     const syncCanvasSize = () => {
-      if (!video.videoWidth || !video.videoHeight) {
+      const videoWidth = manualVideoDimensions?.width ?? video.videoWidth
+      const videoHeight = manualVideoDimensions?.height ?? video.videoHeight
+
+      if (!videoWidth || !videoHeight) {
         return
       }
 
@@ -475,8 +475,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         const canvas = layerCanvasRefs.current[id]
         if (!canvas) continue
 
-        canvas.width = video.videoWidth
-        canvas.height = video.videoHeight
+        canvas.width = videoWidth
+        canvas.height = videoHeight
       }
     }
 
@@ -548,7 +548,9 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     }
 
     const handleRateChange = () => {
-      const nextRate = PLAYBACK_RATES.find((rate) => rate === video.playbackRate)
+      const nextRate = PLAYBACK_RATES.find(
+        (rate) => rate === video.playbackRate,
+      )
       setPlaybackRate(nextRate ?? 1)
     }
 
@@ -609,7 +611,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       video.removeEventListener('volumechange', handleVolumeChange)
       video.removeEventListener('ratechange', handleRateChange)
     }
-  }, [onFrameDurationChange, videoRef])
+  }, [manualVideoDimensions, onFrameDurationChange, videoRef])
 
   const togglePlayback = async () => {
     const video = videoRef.current
@@ -670,12 +672,13 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     setIsMuted(true)
   }
 
-  const updatePlaybackRate = (nextRate: (typeof PLAYBACK_RATES)[number]) => {
+  const updatePlaybackRate = (nextRate: number) => {
     const video = videoRef.current
     if (!video) return
 
-    video.playbackRate = nextRate
-    setPlaybackRate(nextRate)
+    const normalizedRate = PLAYBACK_RATES.find((rate) => rate === nextRate) ?? 1
+    video.playbackRate = normalizedRate
+    setPlaybackRate(normalizedRate)
   }
 
   const updateVolume = (nextVolume: number) => {
@@ -711,6 +714,98 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     await container.requestFullscreen()
   }
 
+  const requestManualVideoDimensions = useCallback(() => {
+    const currentWidth = manualVideoDimensions?.width
+    const currentHeight = manualVideoDimensions?.height
+    const widthInput = window.prompt(
+      `Enter the video width in pixels for "${videoFile.name}"`,
+      currentWidth ? String(currentWidth) : '',
+    )
+
+    if (widthInput === null) {
+      return
+    }
+
+    const heightInput = window.prompt(
+      `Enter the video height in pixels for "${videoFile.name}"`,
+      currentHeight ? String(currentHeight) : '',
+    )
+
+    if (heightInput === null) {
+      return
+    }
+
+    const width = Number(widthInput.trim())
+    const height = Number(heightInput.trim())
+
+    if (
+      !Number.isFinite(width) ||
+      !Number.isFinite(height) ||
+      width <= 0 ||
+      height <= 0
+    ) {
+      window.alert('Video width and height must be positive numbers.')
+      return
+    }
+
+    setManualVideoDimensions({
+      width: Math.round(width),
+      height: Math.round(height),
+    })
+    setNeedsManualVideoDimensions(false)
+  }, [manualVideoDimensions, videoFile.name])
+
+  useEffect(() => {
+    const video = videoRef.current
+    if (!video) return
+
+    if (manualVideoDimensions) {
+      setNeedsManualVideoDimensions(false)
+      return
+    }
+
+    let detectionTimeoutId: number | null = null
+
+    const evaluateManualDimensionFallback = () => {
+      if (
+        video.readyState >= HTMLMediaElement.HAVE_METADATA &&
+        video.currentSrc &&
+        !video.videoWidth &&
+        !video.videoHeight
+      ) {
+        setNeedsManualVideoDimensions(true)
+      }
+    }
+
+    const scheduleEvaluation = () => {
+      if (detectionTimeoutId !== null) {
+        window.clearTimeout(detectionTimeoutId)
+      }
+
+      detectionTimeoutId = window.setTimeout(() => {
+        evaluateManualDimensionFallback()
+      }, 1200)
+    }
+
+    const relevantEvents = ['loadedmetadata', 'loadeddata', 'canplay'] as const
+    for (const eventName of relevantEvents) {
+      video.addEventListener(eventName, scheduleEvaluation)
+    }
+
+    if (video.currentSrc) {
+      scheduleEvaluation()
+    }
+
+    return () => {
+      if (detectionTimeoutId !== null) {
+        window.clearTimeout(detectionTimeoutId)
+      }
+      for (const eventName of relevantEvents) {
+        video.removeEventListener(eventName, scheduleEvaluation)
+      }
+    }
+  }, [manualVideoDimensions, videoFile.name, videoRef])
+
   return (
     /* Video Player Including Controls */
     <div className="flex w-full max-w-5xl flex-col gap-3">
@@ -718,11 +813,22 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       <div
         ref={containerRef}
         className="relative w-fit self-center overflow-hidden rounded-lg bg-black shadow-sm"
+        style={
+          effectiveVideoDimensions
+            ? {
+                width: `${effectiveVideoDimensions.width}px`,
+                maxWidth: '100%',
+                aspectRatio: `${effectiveVideoDimensions.width} / ${effectiveVideoDimensions.height}`,
+              }
+            : undefined
+        }
       >
         <video
           ref={videoRef}
           className="block w-full max-h-[70vh] fullscreen:max-h-screen"
           playsInline
+          width={effectiveVideoDimensions?.width}
+          height={effectiveVideoDimensions?.height}
         />
         {Array.from(layerRegistryRef.current.values()).map((layer) => (
           <canvas
@@ -735,127 +841,45 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         ))}
       </div>
 
-      <div className="rounded-lg border bg-card p-3 shadow-sm">
-        <div className="mb-3 flex flex-wrap items-center gap-2">
-          <Button
-            onClick={() => void togglePlayback()}
-            size="sm"
-            className="w-20"
-          >
-            {isPlaying ? <PauseIcon /> : <PlayIcon />}
-            {isPlaying ? 'Pause' : 'Play'}
-          </Button>
-          <Button
-            onClick={() => stepFrame(-1)}
-            size="sm"
-            variant="outline"
-            title="Step backward one frame"
-          >
-            <SkipBackIcon />
-            Frame
-          </Button>
-          <Button
-            onClick={() => stepFrame(1)}
-            size="sm"
-            variant="outline"
-            title="Step forward one frame"
-          >
-            <SkipForwardIcon />
-            Frame
-          </Button>
-          <div className="flex items-center gap-2">
-            <Button
-              onClick={toggleMute}
-              size="sm"
-              variant="outline"
-              title={isMuted || volume === 0 ? 'Unmute' : 'Mute'}
-            >
-              {isMuted || volume === 0 ? <VolumeOffIcon /> : <Volume2Icon />}
+      {needsManualVideoDimensions ? (
+        <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">
+          Chrome loaded the file but did not expose video dimensions. You can
+          enter the recording width and height manually so gaze projection can
+          still initialize.
+          <div className="mt-2">
+            <Button onClick={requestManualVideoDimensions} size="sm">
+              Enter Width and Height
             </Button>
-            <div className="w-28">
-              <Slider
-                min={0}
-                max={1}
-                step={0.01}
-                value={[isMuted ? 0 : volume]}
-                onValueChange={(values) => {
-                  const [nextVolume = 0] = values
-                  updateVolume(nextVolume)
-                }}
-                aria-label="Volume"
-              />
-            </div>
-          </div>
-          <HoverCard openDelay={100} closeDelay={150}>
-            <HoverCardTrigger asChild>
-              <Button
-                size="icon-sm"
-                variant="outline"
-                title={`Playback speed: ${playbackRate}x`}
-                aria-label={`Playback speed: ${playbackRate}x`}
-              >
-                <GaugeIcon />
-              </Button>
-            </HoverCardTrigger>
-            <HoverCardContent className="w-auto p-2" side="top" align="start">
-              <div className="flex items-center gap-1">
-                {PLAYBACK_RATES.map((rate) => (
-                  <Button
-                    key={rate}
-                    onClick={() => updatePlaybackRate(rate)}
-                    size="sm"
-                    variant={playbackRate === rate ? 'default' : 'outline'}
-                    title={`Set playback speed to ${rate}x`}
-                  >
-                    {rate}x
-                  </Button>
-                ))}
-              </div>
-            </HoverCardContent>
-          </HoverCard>
-          <Button
-            onClick={() => void toggleFullscreen()}
-            size="sm"
-            variant="outline"
-            title={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
-          >
-            {isFullscreen ? <MinimizeIcon /> : <MaximizeIcon />}
-            {isFullscreen ? 'Window' : 'Fullscreen'}
-          </Button>
-          <div className="ml-auto text-sm tabular-nums text-muted-foreground">
-            {formatTime(currentTime)} / {formatTime(duration)}
           </div>
         </div>
+      ) : null}
 
-        <div className="mb-3">
-          <Slider
-            min={0}
-            max={duration || 0.001}
-            step={0.001}
-            value={[Math.min(currentTime, duration || 0)]}
-            onValueChange={(values) => {
-              const [nextTime = 0] = values
-              seekToTime(nextTime)
-            }}
-          />
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm font-medium text-muted-foreground">
-            Layers
-          </span>
-          {Array.from(layerRegistryRef.current.values()).map((layer) => (
-            <Button
-              key={layer.id}
-              size="sm"
-              variant={enabledLayers[layer.id] ? 'default' : 'outline'}
-              onClick={() => toggleLayer(layer.id)}
-            >
-              {layer.label}
-            </Button>
-          ))}
-        </div>
-      </div>
+      <VideoControls
+        currentTime={currentTime}
+        duration={duration}
+        enabledLayers={enabledLayers}
+        events={timelineEvents}
+        isFullscreen={isFullscreen}
+        isMuted={isMuted}
+        isPlaying={isPlaying}
+        isSavingEvents={isSavingEvents}
+        layers={Array.from(layerRegistryRef.current.values()).map((layer) => ({
+          id: layer.id,
+          label: layer.label,
+        }))}
+        playbackRate={playbackRate}
+        playbackRates={PLAYBACK_RATES}
+        volume={volume}
+        onSeek={seekToTime}
+        onStepFrame={stepFrame}
+        onToggleFullscreen={toggleFullscreen}
+        onToggleLayer={toggleLayer}
+        onToggleMute={toggleMute}
+        onTogglePlayback={togglePlayback}
+        onUpdatePlaybackRate={updatePlaybackRate}
+        onUpdateVolume={updateVolume}
+        formatTime={formatTime}
+      />
     </div>
   )
 }

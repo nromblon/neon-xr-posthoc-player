@@ -26,6 +26,8 @@ import {
   EmptyTitle,
 } from '@/components/ui/empty'
 import { Button } from '@/components/ui/button'
+import { useEventPersistence } from '@/hooks/use-event-persistence'
+import { useEventStore } from '@/store/eventStore'
 
 export const Route = createFileRoute('/')({ component: App })
 
@@ -42,6 +44,9 @@ function App() {
   // File-related states
   // Gaze Data
   const [gazeFile, setGazeFile] = React.useState<File | null>(null)
+  const [eventsFile, setEventsFile] = React.useState<File | null>(null)
+  const [eventsDirectoryHandle, setEventsDirectoryHandle] =
+    React.useState<FileSystemDirectoryHandle | null>(null)
   const [shouldShowGazeError, showGazeError] = React.useState(false)
   // Scene Video Data
   const [videoFile, setVideoFile] = React.useState<File | null>(null)
@@ -51,9 +56,17 @@ function App() {
   const [fovHorizontalDeg, setFovHorizontalDeg] = React.useState(82)
 
   const videoRef = useRef<HTMLVideoElement>(null)
+  const gazeStartMs = useEventStore((state) => state.gazeStartTime)
+  const setGazeStartTimeInStore = useEventStore(
+    (state) => state.setGazeStartTime,
+  )
+  const { isSaving: isSavingEvents } = useEventPersistence({
+    eventsDirectoryHandle,
+    eventsFile,
+    gazeStartMs,
+  })
 
   // Align-related state
-  const [gazeStartMs, setGazeStartMs] = React.useState<number>(0)
   const [frameDurationMs, setFrameDurationMs] = React.useState<number>(
     DEFAULT_FRAME_DURATION_MS,
   )
@@ -62,6 +75,16 @@ function App() {
     for (let i = 0; i < file.length; i++) {
       const f = file.item(i)
       if (f && f.name.endsWith('gaze.csv')) {
+        return f
+      }
+    }
+    return null
+  }
+
+  const findEventsFile = (file: FileList) => {
+    for (let i = 0; i < file.length; i++) {
+      const f = file.item(i)
+      if (f && f.name.endsWith('events.csv')) {
         return f
       }
     }
@@ -86,7 +109,7 @@ function App() {
   const setGazeStartTime = (nextGazeStartMs: number) => {
     const boundedGazeStartMs = Math.max(0, Math.round(nextGazeStartMs))
     updateGazeStartInputs(boundedGazeStartMs)
-    setGazeStartMs(boundedGazeStartMs)
+    setGazeStartTimeInStore(boundedGazeStartMs)
   }
 
   const setCurrentTimeAsGazeStart = () => {
@@ -103,7 +126,7 @@ function App() {
     const seconds = parseInt(secInput.value) || 0
     const milliseconds = parseInt(msInput.value) || 0
     const totalMs = minutes * 60 * 1000 + seconds * 1000 + milliseconds
-    setGazeStartMs(totalMs)
+    setGazeStartTime(totalMs)
   }
 
   const shiftGazeStartByFrame = (direction: 1 | -1) => {
@@ -111,7 +134,7 @@ function App() {
   }
 
   return (
-    <div className="display flex justify-between items-center my-4">
+    <div className="display flex justify-between items-start my-4">
       <div
         id="video-div"
         className="flex items-center justify-center h-full flex-1"
@@ -124,7 +147,7 @@ function App() {
             xrConfigFile={configFile}
             fovHorizontalDeg={fovHorizontalDeg}
             circleConfig={{ stroke, radius, color }}
-            gazeStartMs={gazeStartMs}
+            isSavingEvents={isSavingEvents}
             onFrameDurationChange={(frameDurationSeconds) => {
               if (frameDurationSeconds > 0) {
                 setFrameDurationMs(frameDurationSeconds * 1000)
@@ -147,7 +170,7 @@ function App() {
       </div>
       <div
         id="settings-div"
-        className="display flex flex-col gap-2 p-5 mx-5 border h-max w-96 rounded-lg"
+        className="display flex flex-col align-top gap-2 p-5 mx-5 border h-max w-96 rounded-lg"
       >
         <Label className="text-md font-bold mb-2"> Setup </Label>
         <Label className="text-sm" htmlFor="xr-file-upload">
@@ -172,16 +195,20 @@ function App() {
         <FolderPicker
           key={folderPickerKey}
           inputRef={folderPickerRef}
-          onPick={(f) => {
+          onPick={(f, _folderName, directoryHandle) => {
             console.log(f)
+            setEventsDirectoryHandle(directoryHandle ?? null)
             const gf = findGazeFile(f)
+            const ef = findEventsFile(f)
             if (gf) {
               setGazeFile(gf)
             }
+            setEventsFile(ef)
 
             console.log(gf)
             if (!gf || f.length === 0) {
               setGazeFile(null)
+              setEventsFile(null)
               showGazeError(true)
               setFolderPickerKey((k) => k + 1)
               if (folderPickerRef.current) {
