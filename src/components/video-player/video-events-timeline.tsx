@@ -7,6 +7,8 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { useEventStore } from '@/store/eventStore'
 import type { Event as AnnotationEvent } from '@/types/annotations'
 import { EventRow } from './event-row'
+import { Badge } from "@/components/ui/badge"
+import { Spinner } from '../ui/spinner'
 
 const TIMELINE_PLAYHEAD = '#6366f1'
 const LOCKED_EVENT_NAMES = new Set(['recording.begin', 'recording.end'])
@@ -17,6 +19,7 @@ export interface VideoEventsTimelineProps {
   eventNameColumnWidthPx: number
   events: AnnotationEvent[]
   formatTime: (seconds: number) => string
+  isSaving: boolean
   onSeek: (nextTime: number) => void
 }
 
@@ -26,6 +29,7 @@ export const VideoEventsTimeline: React.FC<VideoEventsTimelineProps> = ({
   eventNameColumnWidthPx,
   events,
   formatTime,
+  isSaving,
   onSeek,
 }) => {
   const addEvent = useEventStore((state) => state.addEvent)
@@ -250,6 +254,12 @@ export const VideoEventsTimeline: React.FC<VideoEventsTimelineProps> = ({
           >
             + Add Event
           </Button>
+          {isSaving ? (
+            <Badge variant={"secondary"}>
+              <Spinner data-icon="inline-start" />
+              Saving Events
+            </Badge>
+          ) : null}
         </div>
         <InputGroup className="w-44">
           <SearchIcon className="ml-2 size-4 text-muted-foreground" />

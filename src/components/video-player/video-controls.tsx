@@ -36,6 +36,7 @@ export interface VideoControlsProps {
   isFullscreen: boolean
   isMuted: boolean
   isPlaying: boolean
+  isSavingEvents: boolean
   layers: VideoControlLayer[]
   playbackRate: number
   playbackRates: readonly number[]
@@ -59,6 +60,7 @@ export const VideoControls: React.FC<VideoControlsProps> = ({
   isFullscreen,
   isMuted,
   isPlaying,
+  isSavingEvents,
   layers,
   playbackRate,
   playbackRates,
@@ -200,6 +202,7 @@ export const VideoControls: React.FC<VideoControlsProps> = ({
         eventNameColumnWidthPx={EVENT_NAME_COLUMN_WIDTH_PX}
         events={events}
         formatTime={formatTime}
+        isSaving={isSavingEvents}
         onSeek={onSeek}
       />
     </div>

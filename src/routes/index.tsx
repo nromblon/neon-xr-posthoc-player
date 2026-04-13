@@ -26,7 +26,7 @@ import {
   EmptyTitle,
 } from '@/components/ui/empty'
 import { Button } from '@/components/ui/button'
-import { writeEventsCsv } from '@/lib/utils'
+import { useEventPersistence } from '@/hooks/use-event-persistence'
 import { useEventStore } from '@/store/eventStore'
 
 export const Route = createFileRoute('/')({ component: App })
@@ -56,11 +56,13 @@ function App() {
   const [fovHorizontalDeg, setFovHorizontalDeg] = React.useState(82)
 
   const videoRef = useRef<HTMLVideoElement>(null)
-  const clearEvents = useEventStore((state) => state.removeEvents)
-  const events = useEventStore((state) => state.events)
   const gazeStartMs = useEventStore((state) => state.gazeStartTime)
   const setGazeStartTimeInStore = useEventStore((state) => state.setGazeStartTime)
-  const hasSkippedInitialEventsWriteRef = React.useRef(false)
+  const { isSaving: isSavingEvents } = useEventPersistence({
+    eventsDirectoryHandle,
+    eventsFile,
+    gazeStartMs,
+  })
 
   // Align-related state
   const [frameDurationMs, setFrameDurationMs] = React.useState<number>(
@@ -129,31 +131,6 @@ function App() {
     setGazeStartTime(gazeStartMs + direction * frameDurationMs)
   }
 
-  React.useEffect(() => {
-    hasSkippedInitialEventsWriteRef.current = false
-  }, [eventsDirectoryHandle])
-
-  React.useEffect(() => {
-    if (!eventsDirectoryHandle) {
-      return
-    }
-
-    if (!hasSkippedInitialEventsWriteRef.current) {
-      hasSkippedInitialEventsWriteRef.current = true
-      return
-    }
-
-    const syncEventsFile = async () => {
-      try {
-        await writeEventsCsv(eventsDirectoryHandle, events)
-      } catch (error) {
-        console.error('Failed to update events.csv:', error)
-      }
-    }
-
-    void syncEventsFile()
-  }, [events, eventsDirectoryHandle])
-
   return (
     <div className="display flex justify-between items-start my-4">
       <div
@@ -164,11 +141,11 @@ function App() {
           <VideoPlayer
             videoRef={videoRef}
             gazeDataFile={gazeFile}
-            eventsFile={eventsFile}
             videoFile={videoFile}
             xrConfigFile={configFile}
             fovHorizontalDeg={fovHorizontalDeg}
             circleConfig={{ stroke, radius, color }}
+            isSavingEvents={isSavingEvents}
             onFrameDurationChange={(frameDurationSeconds) => {
               if (frameDurationSeconds > 0) {
                 setFrameDurationMs(frameDurationSeconds * 1000)
@@ -218,7 +195,6 @@ function App() {
           inputRef={folderPickerRef}
           onPick={(f, _folderName, directoryHandle) => {
             console.log(f)
-            clearEvents()
             setEventsDirectoryHandle(directoryHandle ?? null)
             const gf = findGazeFile(f)
             const ef = findEventsFile(f)
