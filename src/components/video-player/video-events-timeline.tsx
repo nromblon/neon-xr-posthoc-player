@@ -77,31 +77,6 @@ export const VideoEventsTimeline: React.FC<VideoEventsTimelineProps> = ({
     left: `${(index / 59) * 100}%`,
     tall: index % 5 === 0,
   }))
-  const pupilWave = Array.from({ length: 120 }, (_, index) => {
-    const normalized = index / 119
-    const base = 0.55 + 0.18 * Math.sin(normalized * 18)
-    const spikes =
-      index % 17 === 0 || index % 29 === 0 ? 0.18 : index % 11 === 0 ? -0.2 : 0
-    return {
-      id: index,
-      height: `${Math.max(18, Math.min(92, (base + spikes) * 100))}%`,
-      left: `${normalized * 100}%`,
-    }
-  })
-  const audioWave = Array.from({ length: 120 }, (_, index) => {
-    const normalized = index / 119
-    const pulse =
-      index === 36 || index === 58 || index === 105
-        ? 0.65
-        : index % 23 === 0
-          ? 0.2
-          : 0.06
-    return {
-      id: index,
-      height: `${Math.max(6, pulse * 100)}%`,
-      left: `${normalized * 100}%`,
-    }
-  })
 
   const renderPlayhead = () => (
     <div
