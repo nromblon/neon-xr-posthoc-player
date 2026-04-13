@@ -57,7 +57,9 @@ function App() {
 
   const videoRef = useRef<HTMLVideoElement>(null)
   const gazeStartMs = useEventStore((state) => state.gazeStartTime)
-  const setGazeStartTimeInStore = useEventStore((state) => state.setGazeStartTime)
+  const setGazeStartTimeInStore = useEventStore(
+    (state) => state.setGazeStartTime,
+  )
   const { isSaving: isSavingEvents } = useEventPersistence({
     eventsDirectoryHandle,
     eventsFile,

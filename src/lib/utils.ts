@@ -52,14 +52,13 @@ function escapeCsvField(value: string | number) {
 export function serializeEventsCsv(eventItems: AnnotationEvent[]) {
   const rows = [...eventItems]
     .sort((a, b) => a.utx_timestamp_ns - b.utx_timestamp_ns)
-    .map(
-      (eventItem) =>
-        [
-          escapeCsvField(eventItem.recording_id),
-          escapeCsvField(eventItem.utx_timestamp_ns),
-          escapeCsvField(eventItem.name),
-          escapeCsvField(eventItem.type),
-        ].join(','),
+    .map((eventItem) =>
+      [
+        escapeCsvField(eventItem.recording_id),
+        escapeCsvField(eventItem.utx_timestamp_ns),
+        escapeCsvField(eventItem.name),
+        escapeCsvField(eventItem.type),
+      ].join(','),
     )
 
   return ['recording id,timestamp [ns],name,type', ...rows].join('\r\n')

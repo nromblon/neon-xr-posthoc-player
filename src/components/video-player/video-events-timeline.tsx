@@ -7,7 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { useEventStore } from '@/store/eventStore'
 import type { Event as AnnotationEvent } from '@/types/annotations'
 import { EventRow } from './event-row'
-import { Badge } from "@/components/ui/badge"
+import { Badge } from '@/components/ui/badge'
 import { Spinner } from '../ui/spinner'
 
 const TIMELINE_PLAYHEAD = '#6366f1'
@@ -81,11 +81,7 @@ export const VideoEventsTimeline: React.FC<VideoEventsTimelineProps> = ({
     const normalized = index / 119
     const base = 0.55 + 0.18 * Math.sin(normalized * 18)
     const spikes =
-      index % 17 === 0 || index % 29 === 0
-        ? 0.18
-        : index % 11 === 0
-          ? -0.2
-          : 0
+      index % 17 === 0 || index % 29 === 0 ? 0.18 : index % 11 === 0 ? -0.2 : 0
     return {
       id: index,
       height: `${Math.max(18, Math.min(92, (base + spikes) * 100))}%`,
@@ -181,8 +177,8 @@ export const VideoEventsTimeline: React.FC<VideoEventsTimelineProps> = ({
 
   const handleAddEvent = () => {
     setAddingEvent(true)
-    setDraftName("")
-    setEditingEventName("")
+    setDraftName('')
+    setEditingEventName('')
   }
 
   const handleAddEventFinish = () => {
@@ -199,7 +195,9 @@ export const VideoEventsTimeline: React.FC<VideoEventsTimelineProps> = ({
     }
 
     if (LOCKED_EVENT_NAMES.has(trimmedName)) {
-      window.alert(`"${trimmedName}" is reserved and cannot be created manually.`)
+      window.alert(
+        `"${trimmedName}" is reserved and cannot be created manually.`,
+      )
       return
     }
 
@@ -208,7 +206,7 @@ export const VideoEventsTimeline: React.FC<VideoEventsTimelineProps> = ({
 
     addEvent({
       recording_id: recordingId,
-      type: "posthoc player",
+      type: 'posthoc player',
       name: trimmedName,
       timestamp_ns: timelineTimestampNs,
       utx_timestamp_ns: Math.max(
@@ -255,7 +253,7 @@ export const VideoEventsTimeline: React.FC<VideoEventsTimelineProps> = ({
             + Add Event
           </Button>
           {isSaving ? (
-            <Badge variant={"secondary"}>
+            <Badge variant={'secondary'}>
               <Spinner data-icon="inline-start" />
               Saving Events
             </Badge>
@@ -346,7 +344,7 @@ export const VideoEventsTimeline: React.FC<VideoEventsTimelineProps> = ({
                 </div>
               </div>
             </div> */}
-{/* 
+            {/* 
             <div
               className="grid min-h-20 border-b"
               style={{ gridTemplateColumns: timelineGridTemplate }}
@@ -448,7 +446,7 @@ export const VideoEventsTimeline: React.FC<VideoEventsTimelineProps> = ({
               <EventRow
                 draftName={draftName}
                 editingEventName={editingEventName}
-                eventName={""}
+                eventName={''}
                 eventNameColumnWidthPx={eventNameColumnWidthPx}
                 eventItems={[
                   {
@@ -460,7 +458,7 @@ export const VideoEventsTimeline: React.FC<VideoEventsTimelineProps> = ({
                       0,
                     ),
                     name: draftName,
-                  } as AnnotationEvent
+                  } as AnnotationEvent,
                 ]}
                 isLocked={false}
                 onCommitEventName={handleAddEventFinish}

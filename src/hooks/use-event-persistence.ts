@@ -7,7 +7,10 @@ import type { Event as AnnotationEvent } from '@/types/annotations'
 const NANOSECONDS_PER_MILLISECOND = 1_000_000
 
 function normalizeHeaderName(header: string) {
-  return header.trim().replace(/^['"`]+|['"`]+$/g, '').toLowerCase()
+  return header
+    .trim()
+    .replace(/^['"`]+|['"`]+$/g, '')
+    .toLowerCase()
 }
 
 interface UseEventPersistenceParams {
@@ -153,7 +156,9 @@ export function useEventPersistence({
       } catch (error) {
         if (!cancelled) {
           const nextError =
-            error instanceof Error ? error : new Error('Failed to load events.csv')
+            error instanceof Error
+              ? error
+              : new Error('Failed to load events.csv')
           setLoadError(nextError)
           setRecordingId('')
           setEventOriginTimestampNs(0)
@@ -232,7 +237,9 @@ export function useEventPersistence({
       } catch (error) {
         if (!cancelled) {
           const nextError =
-            error instanceof Error ? error : new Error('Failed to update events.csv')
+            error instanceof Error
+              ? error
+              : new Error('Failed to update events.csv')
           setSaveError(nextError)
           console.error('Failed to update events.csv:', nextError)
         }

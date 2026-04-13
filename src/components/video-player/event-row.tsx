@@ -75,7 +75,9 @@ export const EventRow: React.FC<EventRowProps> = ({
                 ? 'cursor-not-allowed text-muted-foreground'
                 : 'cursor-text'
             }`}
-            title={isLocked ? 'This event name is locked' : 'Click to rename event'}
+            title={
+              isLocked ? 'This event name is locked' : 'Click to rename event'
+            }
           >
             {eventName}
           </button>
@@ -102,7 +104,9 @@ export const EventRow: React.FC<EventRowProps> = ({
                 onContextMenu={(pointerEvent) =>
                   onDeleteEvent(pointerEvent, eventItem)
                 }
-                title={isLocked ? eventItem.name : 'Right-click to delete this event'}
+                title={
+                  isLocked ? eventItem.name : 'Right-click to delete this event'
+                }
               >
                 <div className="h-2 w-2 rotate-45 border border-foreground/70 bg-background" />
               </div>

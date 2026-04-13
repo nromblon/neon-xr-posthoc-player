@@ -7,7 +7,6 @@ import {
   buildProjector,
   projectGazeSample,
 } from '@/lib/gaze-projection'
-import type { Event as AnnotationEvent } from '@/types/annotations'
 import { useEventStore } from '@/store/eventStore'
 import { VideoControls } from './video-player/video-controls'
 
@@ -66,7 +65,6 @@ const defaultCircleConfig: CircleConfig = {
 
 const DEFAULT_FRAME_DURATION_SECONDS = 1 / 30
 const PLAYBACK_RATES = [0.5, 1, 1.5, 2] as const
-const NANOSECONDS_PER_MILLISECOND = 1_000_000
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max)
@@ -116,7 +114,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [duration, setDuration] = useState(0)
   const [isMuted, setIsMuted] = useState(false)
   const [volume, setVolume] = useState(1)
-  const [playbackRate, setPlaybackRate] = useState<(typeof PLAYBACK_RATES)[number]>(1)
+  const [playbackRate, setPlaybackRate] =
+    useState<(typeof PLAYBACK_RATES)[number]>(1)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [enabledLayers, setEnabledLayers] = useState<Record<string, boolean>>({
     gaze: true,
@@ -429,7 +428,13 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         video.removeEventListener(eventName, tryBuildProjector)
       }
     }
-  }, [fovHorizontalDeg, manualVideoDimensions, videoFile, videoRef, xrConfigFile]) // depends on source, metadata, and config
+  }, [
+    fovHorizontalDeg,
+    manualVideoDimensions,
+    videoFile,
+    videoRef,
+    xrConfigFile,
+  ]) // depends on source, metadata, and config
 
   // On Enabled Layers Change: redraw with new layer visibility
   useEffect(() => {
@@ -543,7 +548,9 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     }
 
     const handleRateChange = () => {
-      const nextRate = PLAYBACK_RATES.find((rate) => rate === video.playbackRate)
+      const nextRate = PLAYBACK_RATES.find(
+        (rate) => rate === video.playbackRate,
+      )
       setPlaybackRate(nextRate ?? 1)
     }
 
