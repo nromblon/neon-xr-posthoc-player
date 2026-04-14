@@ -8,6 +8,8 @@ The app runs entirely in the browser. You load a scene video, a folder containin
 
 ![Desktop empty state](docs/screenshots/readme-empty-state.png)
 
+![Desktop populated state](docs/screenshots/readme-populated-state.png)
+
 ## What It Does
 
 - Loads a local XR scene video file
