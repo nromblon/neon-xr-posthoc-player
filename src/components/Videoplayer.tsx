@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import {
   Projector,
   buildProjector,
+  debugProjector,
   projectGazeSample,
 } from '@/lib/gaze-projection'
 import { useEventStore } from '@/store/eventStore'
@@ -394,6 +395,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
             videoHeight,
             fovHorizontalDeg,
           })
+
+          debugProjector(projector)
 
           gazeProjectorRef.current = projector
           setNeedsManualVideoDimensions(false)
