@@ -44,22 +44,11 @@ export interface CameraIntrinsics {
 
 /** Parameters describing the Quest 3 video recording */
 export interface VideoParams {
-  /** Recording width in pixels */
   videoWidth: number
-  /** Recording height in pixels */
   videoHeight: number
-  /**
-   * Horizontal FOV of the recording in degrees.
-   *
-   * Typical values:
-   *   ~89°  → in-headset recording (1920×1080) or MQDH Cropped
-   *   ~120° → MQDH Cinematic
-   *
-   * Verify empirically: display a fixation cross at a known angle in VR,
-   * record it, measure its pixel x position, then solve:
-   *   fx = (pixel_x - cx) / Math.tan(toRad(knownAngleDeg))
-   */
   fovHorizontalDeg: number
+  gazeOffsetX?: number  // pixels, default 0
+  gazeOffsetY?: number  // pixels, default 0
 }
 
 /** A built projector — construct once, reuse for all samples in a recording */
@@ -69,6 +58,8 @@ export interface Projector {
   K: CameraIntrinsics
   videoWidth: number
   videoHeight: number
+  gazeOffsetX: number
+  gazeOffsetY: number
 }
 
 /** Result of projecting a single gaze sample */
@@ -156,6 +147,8 @@ function projectRayToFrame(
   rayQuest: vec3,
   mountPosition: vec3,
   K: CameraIntrinsics,
+  gazeOffsetX: number,
+  gazeOffsetY: number
 ): GazeProjectionResult {
   // Ray must be facing forward (positive Z) to land on screen
   if (rayQuest[2] <= 0) {
@@ -176,8 +169,8 @@ function projectRayToFrame(
   const yAtPlane = mountPosition[1] + t * rayQuest[1]
 
   return {
-    x: K.fx * xAtPlane + K.cx,
-    y: K.fy * yAtPlane + K.cy,
+    x: K.fx * xAtPlane + K.cx + gazeOffsetX,
+    y: K.fy * yAtPlane + K.cy + gazeOffsetY,
     valid: true,
   }
 }
@@ -219,7 +212,7 @@ export function buildProjector(
   const cx = videoWidth / 2
   const cy = videoHeight / 2
 
-  return { mountQuat, mountPosition, K: { fx, fy, cx, cy }, videoWidth, videoHeight }
+  return { mountQuat, mountPosition, K: { fx, fy, cx, cy }, videoWidth, videoHeight, gazeOffsetX: videoParams.gazeOffsetX || 0, gazeOffsetY: videoParams.gazeOffsetY || 0 }
 }
 
 export function debugProjector(projector: Projector): void {
@@ -284,7 +277,7 @@ export function projectGazeSample(
 ): GazeProjectionResult {
   const rayScene = azElToRayScene(azimuthDeg, elevationDeg)
   const rayQuest = rotateRayToQuestSpace(rayScene, projector.mountQuat)
-  return projectRayToFrame(rayQuest, projector.mountPosition, projector.K)
+  return projectRayToFrame(rayQuest, projector.mountPosition, projector.K, projector.gazeOffsetX, projector.gazeOffsetY)
 }
 
 /**
