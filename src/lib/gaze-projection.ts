@@ -133,9 +133,16 @@ function azElToRayScene(azimuthDeg: number, elevationDeg: number): vec3 {
  * Only rotation is applied — translation is irrelevant for ray directions.
  */
 function rotateRayToQuestSpace(rayScene: vec3, mountQuat: quat): vec3 {
-  const out = vec3.create()
-  vec3.transformQuat(out, rayScene, mountQuat)
-  return out
+  // Neon scene camera: X-right, Y-down, Z-forward (right-handed)
+  // Unity (where the mount calibration is defined): X-right, Y-up, Z-forward (left-handed)
+  // The only axis difference is Y — negate it before applying the Unity rotation
+  const rayUnity = vec3.fromValues(rayScene[0], -rayScene[1], rayScene[2])
+
+  const rotated = vec3.create()
+  vec3.transformQuat(rotated, rayUnity, mountQuat)
+
+  // Convert result back from Unity Y-up to camera/image Y-down for projection
+  return vec3.fromValues(rotated[0], -rotated[1], rotated[2])
 }
 
 /**
@@ -201,11 +208,11 @@ export function buildProjector(
   // quat.fromEuler(mountQuat, r.y, r.x, r.z); // swap pitch/yaw if off
   const mountQuat = quat.create()
   console.log('rebuilding projector');
-  quat.fromEuler(mountQuat, r.x, r.y, -r.z)
+  quat.fromEuler(mountQuat, r.x, r.y, r.z)  // standard order, no sign changes
 
   // Extract position offset — stored in metres in config.json
   const p = configJson.sensorCalibration.offset.position;
-  const mountPosition = vec3.fromValues(p.x, p.y, p.z);
+  const mountPosition = vec3.fromValues(p.x, -p.y, p.z);
 
   const fx = videoWidth / 2 / Math.tan(toRad(fovHorizontalDeg) / 2)
   const fy = fx
@@ -246,6 +253,21 @@ export function debugProjector(projector: Projector): void {
   console.log('mountQuat:', Array.from(projector.mountQuat).map(v => v.toFixed(6)))
   console.log('mountPosition:', Array.from(projector.mountPosition).map(v => v.toFixed(4)))
   console.log('K:', projector.K)
+
+    // Also project to pixels
+  const straight = projectGazeSample(projector, 0, 0)
+  const up10 = projectGazeSample(projector, 0, 10)
+  const down10 = projectGazeSample(projector, 0, -10)
+  const right10 = projectGazeSample(projector, 10, 0)
+
+  console.table({
+    'straight (az=0, el=0)':   { x: straight.x?.toFixed(1), y: straight.y?.toFixed(1) },
+    '10° up   (az=0, el=+10)': { x: up10.x?.toFixed(1),     y: up10.y?.toFixed(1) },
+    '10° down (az=0, el=-10)': { x: down10.x?.toFixed(1),   y: down10.y?.toFixed(1) },
+    '10° right(az=10, el=0)':  { x: right10.x?.toFixed(1),  y: right10.y?.toFixed(1) },
+  })
+
+  console.log(`Video: ${projector.videoWidth}x${projector.videoHeight}, centre: (${projector.K.cx}, ${projector.K.cy})`)
 }
 
 /**
