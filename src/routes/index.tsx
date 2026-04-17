@@ -5,8 +5,8 @@ import Color from 'color'
 import { BookXIcon, SkipBackIcon, SkipForwardIcon } from 'lucide-react'
 import { Toast } from 'radix-ui'
 import { FolderPicker } from '@/components/ui/folder-picker'
+import type { FolderPickEntry } from '@/components/ui/folder-picker'
 import { Input } from '@/components/ui/input'
-import { Separator } from '@/components/ui/separator'
 import {
   ColorPicker,
   ColorPickerAlpha,
@@ -28,10 +28,19 @@ import {
 import { Button } from '@/components/ui/button'
 import { useEventPersistence } from '@/hooks/use-event-persistence'
 import { useEventStore } from '@/store/eventStore'
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 
 export const Route = createFileRoute('/')({ component: App })
 
 const DEFAULT_FRAME_DURATION_MS = 1000 / 30
+const SCENE_VIDEO_EXTENSIONS = new Set([
+  'mp4',
+  'mov',
+  'm4v',
+  'avi',
+  'mkv',
+  'webm',
+])
 
 function App() {
   const [radius, setRadius] = React.useState(14)
@@ -40,6 +49,10 @@ function App() {
 
   const folderPickerRef = useRef<HTMLInputElement | null>(null)
   const [folderPickerKey, setFolderPickerKey] = React.useState(0)
+  const packagePickerRef = useRef<HTMLInputElement | null>(null)
+  const [packagePickerKey, setPackagePickerKey] = React.useState(0)
+  const videoInputRef = useRef<HTMLInputElement | null>(null)
+  const configInputRef = useRef<HTMLInputElement | null>(null)
 
   // File-related states
   // Gaze Data
@@ -48,6 +61,10 @@ function App() {
   const [eventsDirectoryHandle, setEventsDirectoryHandle] =
     React.useState<FileSystemDirectoryHandle | null>(null)
   const [shouldShowGazeError, showGazeError] = React.useState(false)
+  const [selectionErrorMessage, setSelectionErrorMessage] = React.useState(
+    "Unable to find valid gaze data file. Please select a folder containing 'gaze.csv'.",
+  )
+  const [selectedGazeFolderLabel, setSelectedGazeFolderLabel] = React.useState('')
   // Scene Video Data
   const [videoFile, setVideoFile] = React.useState<File | null>(null)
   // Calibration Config Data
@@ -89,6 +106,165 @@ function App() {
       }
     }
     return null
+  }
+
+  const findConfigEntry = (entries: FolderPickEntry[]) =>
+    entries.find((entry) => {
+      const segments = entry.relativePath.split('/')
+      return segments.length === 2 && entry.file.name === 'config.json'
+    })
+
+  const findSceneVideoEntry = (entries: FolderPickEntry[]) =>
+    entries.find((entry) => {
+      const segments = entry.relativePath.split('/')
+      if (segments.length !== 2) {
+        return false
+      }
+
+      const fileName = entry.file.name.toLowerCase()
+      const extension = fileName.split('.').pop() ?? ''
+
+      return (
+        fileName.startsWith('scene') &&
+        (entry.file.type.startsWith('video/') ||
+          SCENE_VIDEO_EXTENSIONS.has(extension))
+      )
+    })
+
+  const findDataFolderName = (entries: FolderPickEntry[]) => {
+    const folderNames = new Set(
+      entries
+        .map((entry) => entry.relativePath.split('/')[1])
+        .filter((segment): segment is string => Boolean(segment)),
+    )
+
+    return Array.from(folderNames).find((name) =>
+      name.toLowerCase().startsWith('data'),
+    )
+  }
+
+  const showSelectionError = (message: string) => {
+    setSelectionErrorMessage(message)
+    showGazeError(true)
+  }
+
+  const setInputFiles = (
+    input: HTMLInputElement | null,
+    files: File[],
+  ) => {
+    if (!input) {
+      return
+    }
+
+    const dataTransfer = new DataTransfer()
+    for (const file of files) {
+      dataTransfer.items.add(file)
+    }
+    input.files = dataTransfer.files
+  }
+
+  const resetDataFolderPicker = () => {
+    setFolderPickerKey((k) => k + 1)
+    setSelectedGazeFolderLabel('')
+    if (folderPickerRef.current) {
+      folderPickerRef.current.value = ''
+    }
+  }
+
+  const handleGazeFolderPick = (
+    files: FileList,
+    _folderName: string,
+    directoryHandle?: FileSystemDirectoryHandle,
+  ) => {
+    setEventsDirectoryHandle(directoryHandle ?? null)
+    const gf = findGazeFile(files)
+    const ef = findEventsFile(files)
+    setSelectedGazeFolderLabel(_folderName)
+    if (gf) {
+      setGazeFile(gf)
+    }
+    setEventsFile(ef)
+
+    if (!gf || files.length === 0) {
+      setGazeFile(null)
+      setEventsFile(null)
+      showSelectionError(
+        "Unable to find valid gaze data file. Please select a folder containing 'gaze.csv'.",
+      )
+      resetDataFolderPicker()
+    }
+  }
+
+  const handlePackageFolderPick = async (
+    files: FileList,
+    folderName: string,
+    directoryHandle?: FileSystemDirectoryHandle,
+    entries?: Array<FolderPickEntry>,
+  ) => {
+    const normalizedEntries =
+      entries ??
+      Array.from(files).map((file) => ({
+        file,
+        relativePath:
+          (file as File & { webkitRelativePath?: string }).webkitRelativePath ??
+          `${folderName}/${file.name}`,
+      }))
+
+    const sceneEntry = findSceneVideoEntry(normalizedEntries)
+    const configEntry = findConfigEntry(normalizedEntries)
+    const dataFolderName = findDataFolderName(normalizedEntries)
+
+    if (!sceneEntry || !configEntry || !dataFolderName) {
+      showSelectionError(
+        "Unable to auto-select files. Expected a top-level 'scene*' video, a 'data*' folder, and 'config.json'.",
+      )
+      setPackagePickerKey((k) => k + 1)
+      if (packagePickerRef.current) {
+        packagePickerRef.current.value = ''
+      }
+      return
+    }
+
+    const dataFolderFiles = normalizedEntries
+      .filter((entry) => entry.relativePath.split('/')[1] === dataFolderName)
+      .map((entry) => entry.file)
+
+    const dataTransfer = new DataTransfer()
+    for (const file of dataFolderFiles) {
+      dataTransfer.items.add(file)
+    }
+
+    const nextGazeFile = findGazeFile(dataTransfer.files)
+    const nextEventsFile = findEventsFile(dataTransfer.files)
+
+    if (!nextGazeFile) {
+      showSelectionError(
+        `Found '${dataFolderName}' but it does not contain 'gaze.csv'.`,
+      )
+      return
+    }
+
+    setVideoFile(sceneEntry.file)
+    setConfigFile(configEntry.file)
+    setGazeFile(nextGazeFile)
+    setEventsFile(nextEventsFile)
+    setInputFiles(videoInputRef.current, [sceneEntry.file])
+    setInputFiles(configInputRef.current, [configEntry.file])
+    setInputFiles(folderPickerRef.current, dataFolderFiles)
+    setSelectedGazeFolderLabel(dataFolderName)
+
+    if (directoryHandle) {
+      try {
+        const dataDirectoryHandle = await directoryHandle.getDirectoryHandle(
+          dataFolderName,
+        )
+        setEventsDirectoryHandle(dataDirectoryHandle)
+      } catch {
+        setEventsDirectoryHandle(null)
+      }
+    } else {
+      setEventsDirectoryHandle(null)
+    }
   }
 
   const updateGazeStartInputs = (totalMs: number) => {
@@ -133,6 +309,9 @@ function App() {
     setGazeStartTime(gazeStartMs + direction * frameDurationMs)
   }
 
+  const sectionLabelClassName = 'text-sm font-medium'
+  const sectionContentClassName = 'space-y-4'
+
   return (
     <div className="display flex justify-between items-start my-4">
       <div
@@ -172,216 +351,221 @@ function App() {
         id="settings-div"
         className="display flex flex-col align-top gap-2 p-5 mx-5 border h-max w-96 rounded-lg"
       >
-        <Label className="text-md font-bold mb-2"> Setup </Label>
-        <Label className="text-sm" htmlFor="xr-file-upload">
-          {' '}
-          XR Video (Scene Video){' '}
-        </Label>
-        <Input
-          id="xr-file-upload"
-          type="file"
-          className="text-muted-foreground"
-          onChange={(e) => {
-            const file = e.target.files?.[0]
-            if (file) {
-              setVideoFile(file)
-            }
-          }}
-        />
-        <Label className="text-sm" htmlFor="neon-gaze-upload">
-          {' '}
-          Neon Gaze Data{' '}
-        </Label>
-        <FolderPicker
-          key={folderPickerKey}
-          inputRef={folderPickerRef}
-          onPick={(f, _folderName, directoryHandle) => {
-            console.log(f)
-            setEventsDirectoryHandle(directoryHandle ?? null)
-            const gf = findGazeFile(f)
-            const ef = findEventsFile(f)
-            if (gf) {
-              setGazeFile(gf)
-            }
-            setEventsFile(ef)
+        <Accordion type="multiple">
+          <AccordionItem value="setup">
+            <AccordionTrigger className='text-lg font-semibold'>Setup</AccordionTrigger>
+            <AccordionContent className={sectionContentClassName}>
+              <Label
+                className={sectionLabelClassName}
+                htmlFor="recording-folder-upload"
+              >
+                Recording Folder
+              </Label>
+              <FolderPicker
+                key={packagePickerKey}
+                inputRef={packagePickerRef}
+                buttonLabel="Upload Folder"
+                placeholder="Choose a recording folder"
+                onPick={(files, folderName, directoryHandle, entries) => {
+                  void handlePackageFolderPick(
+                    files,
+                    folderName,
+                    directoryHandle,
+                    entries,
+                  )
+                }}
+              />
+              <div id='setup-specifics' className='display flex flex-col gap-2 p-4 border-2 border-accent rounded-md'>
+                <Label className={'text-sm'} htmlFor="xr-file-upload">
+                  XR Video (Scene Video)
+                </Label>
+                <Input
+                  ref={videoInputRef}
+                  id="xr-file-upload"
+                  type="file"
+                  className="text-muted-foreground"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) {
+                      setVideoFile(file)
+                    }
+                  }}
+                />
+                <Label className={'text-sm'} htmlFor="neon-gaze-upload">
+                  Neon Gaze Data
+                </Label>
+                <FolderPicker
+                  key={folderPickerKey}
+                  inputRef={folderPickerRef}
+                  selectedLabel={selectedGazeFolderLabel}
+                  onPick={handleGazeFolderPick}
+                />
+                <Toast.Root
+                  className="ToastRoot flex w-80 flex-col items-start justify-center gap-2 rounded-lg bg-destructive p-4 shadow-sm"
+                  open={shouldShowGazeError}
+                  duration={3000}
+                  onOpenChange={showGazeError}
+                >
+                  <Toast.Title className="font-medium text-neutral-50 text-md">
+                    Selection Error
+                  </Toast.Title>
+                  <Toast.Description className="wrap-normal text-neutral-50 text-sm">
+                    {selectionErrorMessage}
+                  </Toast.Description>
+                </Toast.Root>
+                <Label
+                  className={'text sm'}
+                  htmlFor="calibration-file-upload"
+                >
+                  Neon XR Calibration File (config.json)
+                </Label>
+                <Input
+                  ref={configInputRef}
+                  id="calibration-file-upload"
+                  type="file"
+                  className="text-muted-foreground"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) {
+                      setConfigFile(file)
+                    }
+                  }}
+                />
+              </div>
 
-            console.log(gf)
-            if (!gf || f.length === 0) {
-              setGazeFile(null)
-              setEventsFile(null)
-              showGazeError(true)
-              setFolderPickerKey((k) => k + 1)
-              if (folderPickerRef.current) {
-                folderPickerRef.current.value = ''
-              }
-              // alert('Unable to find valid gaze data file. Please select a folder containing "gaze.csv".')
-              // console.log('missing gaze file')
-            }
-          }}
-        />
-        <Toast.Root
-          className="flex flex-col gap-2 ToastRoot bg-destructive shadow-sm w-80 items-start justify-center rounded-lg p-4"
-          open={shouldShowGazeError}
-          duration={3000}
-          onOpenChange={showGazeError}
-        >
-          <Toast.Title className="font-medium text-neutral-50 text-md">
-            Gaze Data Selection Error
-          </Toast.Title>
-          <Toast.Description className="wrap-normal text-neutral-50 text-sm">
-            Unable to find valid gaze data file. {'\n'} Please select a folder
-            containing 'gaze.csv'.
-          </Toast.Description>
-        </Toast.Root>
-
-        <Label className="text-sm" htmlFor="calibration-file-upload">
-          {' '}
-          Neon XR Calibration File (config.json){' '}
-        </Label>
-        <Input
-          id="calibration-file-upload"
-          type="file"
-          className="text-muted-foreground"
-          onChange={(e) => {
-            const file = e.target.files?.[0]
-            if (file) {
-              setConfigFile(file)
-            }
-          }}
-        />
-
-        <Label className="text-sm" htmlFor="recording-fov">
-          {' '}
-          Horizontal FOV{' '}
-        </Label>
-        <SliderNumberInput
-          id="recording-fov"
-          value={fovHorizontalDeg}
-          onValueChange={setFovHorizontalDeg}
-          min={45}
-          max={120}
-        />
-
-        <Separator className="mt-4 mb-2" />
-        <Label className="text-md font-bold mb-2"> Align </Label>
-        <Button
-          onClick={setCurrentTimeAsGazeStart}
-          disabled={!videoFile || !gazeFile || !configFile}
-        >
-          Set Current Time as Gaze Start Time
-        </Button>
-        <Label className="text-sm" htmlFor="gaze-start-time">
-          {' '}
-          Gaze Start Time{' '}
-        </Label>
-        <div id="gaze-start-time" className="flex flex-row items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            title="Press when gaze is behind by one frame"
-            onClick={() => shiftGazeStartByFrame(-1)}
-            disabled={!videoFile || !gazeFile || !configFile}
-          >
-            <SkipBackIcon />
-          </Button>
-          <Input
-            id="m-gst"
-            type="number"
-            placeholder="min"
-            disabled={!videoFile || !gazeFile}
-            min={0}
-            max={9999}
-            onChange={recomputeGazeStartMs}
-            className="w-18"
-          />
-          :
-          <Input
-            id="s-gst"
-            type="number"
-            placeholder="sec"
-            disabled={!videoFile || !gazeFile || !configFile}
-            min={0}
-            max={59}
-            onChange={recomputeGazeStartMs}
-            className="w-16"
-          />
-          :
-          <Input
-            id="ms-gst"
-            type="number"
-            placeholder="ms"
-            disabled={!videoFile || !gazeFile || !configFile}
-            min={0}
-            max={999}
-            onChange={recomputeGazeStartMs}
-            className="w-17"
-          />
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            title="Press when gaze is ahead by one frame"
-            onClick={() => shiftGazeStartByFrame(1)}
-            disabled={!videoFile || !gazeFile || !configFile}
-          >
-            <SkipForwardIcon />
-          </Button>
-        </div>
-        <Separator className="mt-4 mb-2" />
-        <Label className="text-md font-bold mb-2">
-          {' '}
-          Gaze Visualizer Style{' '}
-        </Label>
-        <Label className="text-sm" htmlFor="gaze-radius">
-          {' '}
-          Radius{' '}
-        </Label>
-        <SliderNumberInput
-          id="gaze-radius"
-          value={radius}
-          onValueChange={setRadius}
-          min={1}
-          max={100}
-        />
-        <Label className="text-sm" htmlFor="gaze-stroke">
-          {' '}
-          Stroke Width{' '}
-        </Label>
-        <SliderNumberInput
-          id="gaze-stroke"
-          value={stroke}
-          onValueChange={setStroke}
-          min={1}
-          max={100}
-        />
-        <Label className="text-sm" htmlFor="gaze-color">
-          {' '}
-          Color{' '}
-        </Label>
-        <ColorPicker
-          id="gaze-color"
-          defaultValue={color}
-          color={color}
-          onChange={(v) => {
-            const c = Color(v)
-            setColor(c.hexa())
-          }}
-          className="max-w-sm h-70 rounded-md border bg-background p-4 shadow-sm"
-        >
-          <ColorPickerSelection />
-          <div className="flex items-center gap-4">
-            <ColorPickerEyeDropper />
-            <div className="grid w-full gap-1">
-              <ColorPickerHue />
-              <ColorPickerAlpha />
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <ColorPickerOutput />
-            <ColorPickerFormat />
-          </div>
-        </ColorPicker>
+              <Label className={sectionLabelClassName} htmlFor="recording-fov">
+                Horizontal FOV
+              </Label>
+              <SliderNumberInput
+                id="recording-fov"
+                value={fovHorizontalDeg}
+                onValueChange={setFovHorizontalDeg}
+                min={45}
+                max={120}
+              />
+            </AccordionContent>
+          </AccordionItem>
+          <AccordionItem value="adjust">
+            <AccordionTrigger className='text-lg font-semibold'>Align</AccordionTrigger>
+            <AccordionContent className={sectionContentClassName}>
+              <Button
+                onClick={setCurrentTimeAsGazeStart}
+                disabled={!videoFile || !gazeFile || !configFile}
+                className="w-full"
+              >
+                Set Current Time as Gaze Start Time
+              </Button>
+              <Label className={sectionLabelClassName} htmlFor="gaze-start-time">
+                Gaze Start Time
+              </Label>
+              <div id="gaze-start-time" className="flex flex-row items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  title="Press when gaze is behind by one frame"
+                  onClick={() => shiftGazeStartByFrame(-1)}
+                  disabled={!videoFile || !gazeFile || !configFile}
+                >
+                  <SkipBackIcon />
+                </Button>
+                <Input
+                  id="m-gst"
+                  type="number"
+                  placeholder="min"
+                  disabled={!videoFile || !gazeFile}
+                  min={0}
+                  max={9999}
+                  onChange={recomputeGazeStartMs}
+                  className="w-18"
+                />
+                :
+                <Input
+                  id="s-gst"
+                  type="number"
+                  placeholder="sec"
+                  disabled={!videoFile || !gazeFile || !configFile}
+                  min={0}
+                  max={59}
+                  onChange={recomputeGazeStartMs}
+                  className="w-16"
+                />
+                :
+                <Input
+                  id="ms-gst"
+                  type="number"
+                  placeholder="ms"
+                  disabled={!videoFile || !gazeFile || !configFile}
+                  min={0}
+                  max={999}
+                  onChange={recomputeGazeStartMs}
+                  className="w-17"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  title="Press when gaze is ahead by one frame"
+                  onClick={() => shiftGazeStartByFrame(1)}
+                  disabled={!videoFile || !gazeFile || !configFile}
+                >
+                  <SkipForwardIcon />
+                </Button>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+          <AccordionItem value="visualizer-style">
+            <AccordionTrigger className='text-lg font-semibold'>Gaze Visualizer Style</AccordionTrigger>
+            <AccordionContent className={sectionContentClassName}>
+              <Label className={sectionLabelClassName} htmlFor="gaze-radius">
+                Radius
+              </Label>
+              <SliderNumberInput
+                id="gaze-radius"
+                value={radius}
+                onValueChange={setRadius}
+                min={1}
+                max={100}
+              />
+              <Label className={sectionLabelClassName} htmlFor="gaze-stroke">
+                Stroke Width
+              </Label>
+              <SliderNumberInput
+                id="gaze-stroke"
+                value={stroke}
+                onValueChange={setStroke}
+                min={1}
+                max={100}
+              />
+              <Label className={sectionLabelClassName} htmlFor="gaze-color">
+                Color
+              </Label>
+              <ColorPicker
+                id="gaze-color"
+                defaultValue={color}
+                color={color}
+                onChange={(v) => {
+                  const c = Color(v)
+                  setColor(c.hexa())
+                }}
+                className="max-w-sm h-70 rounded-md border bg-background p-4 shadow-sm"
+              >
+                <ColorPickerSelection />
+                <div className="flex items-center gap-4">
+                  <ColorPickerEyeDropper />
+                  <div className="grid w-full gap-1">
+                    <ColorPickerHue />
+                    <ColorPickerAlpha />
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <ColorPickerOutput />
+                  <ColorPickerFormat />
+                </div>
+              </ColorPicker>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
       </div>
     </div>
   )
