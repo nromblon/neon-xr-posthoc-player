@@ -2,6 +2,8 @@ import { create } from 'zustand'
 import type { SensorOffsetValues } from '@/lib/config-file'
 import type { Event } from '../types/annotations'
 
+// TODO: refactor to split into separate stores for events vs config, and use immer for immutability
+
 interface EventState {
   eventOriginTimestampNs: number
   events: Array<Event>
