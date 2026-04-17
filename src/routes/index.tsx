@@ -3,7 +3,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import React, { useRef } from 'react'
 import Color from 'color'
 import { BookXIcon, SaveIcon, SkipBackIcon, SkipForwardIcon } from 'lucide-react'
-import { Toast } from 'radix-ui'
+import { toast } from 'sonner'
 import type { FolderPickEntry } from '@/components/ui/folder-picker'
 import { FolderPicker } from '@/components/ui/folder-picker'
 import { Input } from '@/components/ui/input'
@@ -78,12 +78,6 @@ function App() {
     React.useState<FileSystemDirectoryHandle | null>(null)
   const [recordingDirectoryHandle, setRecordingDirectoryHandle] =
     React.useState<FileSystemDirectoryHandle | null>(null)
-  const [shouldShowGazeError, showGazeError] = React.useState(false)
-  const [selectionErrorMessage, setSelectionErrorMessage] = React.useState(
-    "Unable to find valid gaze data file. Please select a folder containing 'gaze.csv'.",
-  )
-  const [shouldShowConfigSavedToast, setShouldShowConfigSavedToast] =
-    React.useState(false)
   const [selectedGazeFolderLabel, setSelectedGazeFolderLabel] =
     React.useState('')
   // Scene Video Data
@@ -175,8 +169,9 @@ function App() {
   }
 
   const showSelectionError = (message: string) => {
-    setSelectionErrorMessage(message)
-    showGazeError(true)
+    toast.error('Selection Error', {
+      description: message,
+    })
   }
 
   const setInputFiles = (input: HTMLInputElement | null, files: Array<File>) => {
@@ -434,7 +429,9 @@ function App() {
       )
       setConfigFile(modifiedConfigFile)
       setInputFiles(configInputRef.current, [modifiedConfigFile])
-      setShouldShowConfigSavedToast(true)
+      toast.success('Config Saved', {
+        description: 'Saved the updated offsets to config_modified.json.',
+      })
     } catch (error) {
       console.error('Failed to save config_modified.json:', error)
     }
@@ -592,19 +589,6 @@ function App() {
                   selectedLabel={selectedGazeFolderLabel}
                   onPick={handleGazeFolderPick}
                 />
-                <Toast.Root
-                  className="ToastRoot flex w-80 flex-col items-start justify-center gap-2 rounded-lg bg-destructive p-4 shadow-sm"
-                  open={shouldShowGazeError}
-                  duration={3000}
-                  onOpenChange={showGazeError}
-                >
-                  <Toast.Title className="font-medium text-neutral-50 text-md">
-                    Selection Error
-                  </Toast.Title>
-                  <Toast.Description className="wrap-normal text-neutral-50 text-sm">
-                    {selectionErrorMessage}
-                  </Toast.Description>
-                </Toast.Root>
                 <Label className={'text-xs'} htmlFor="calibration-file-upload">
                   Neon XR Calibration File (config.json)
                 </Label>
@@ -742,19 +726,6 @@ function App() {
                     />
                   </div>
               </div>
-              <Toast.Root
-                className="ToastRoot flex w-80 flex-col items-start justify-center gap-2 rounded-lg bg-emerald-600 p-4 shadow-sm"
-                open={shouldShowConfigSavedToast}
-                duration={3000}
-                onOpenChange={setShouldShowConfigSavedToast}
-              >
-                <Toast.Title className="text-md font-medium text-white">
-                  Config Saved
-                </Toast.Title>
-                <Toast.Description className="text-sm text-white">
-                  Saved the updated offsets to config_modified.json.
-                </Toast.Description>
-              </Toast.Root>
             </AccordionContent>
           </AccordionItem>
           <AccordionItem value="adjust">
