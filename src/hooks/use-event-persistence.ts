@@ -13,6 +13,18 @@ function normalizeHeaderName(header: string) {
     .toLowerCase()
 }
 
+function getPinnedEventSortRank(name: string) {
+  if (name === 'recording.begin') {
+    return 0
+  }
+
+  if (name === 'recording.end') {
+    return 1
+  }
+
+  return 2
+}
+
 interface UseEventPersistenceParams {
   eventsDirectoryHandle: FileSystemDirectoryHandle | null
   eventsFile: File | null
@@ -128,7 +140,16 @@ export function useEventPersistence({
             }
           })
           .filter((event): event is AnnotationEvent => event !== null)
-          .sort((a, b) => a.timestamp_ns - b.timestamp_ns)
+          .sort((a, b) => {
+            const rankDifference =
+              getPinnedEventSortRank(a.name) - getPinnedEventSortRank(b.name)
+
+            if (rankDifference !== 0) {
+              return rankDifference
+            }
+
+            return a.timestamp_ns - b.timestamp_ns
+          })
 
         setRecordingId(rawEvents[0]?.recording_id ?? '')
 
