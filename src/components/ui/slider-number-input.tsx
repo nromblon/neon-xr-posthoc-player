@@ -12,6 +12,7 @@ type SliderNumberInputProps = {
   min?: number
   max?: number
   step?: number
+  sliderTitle?: string
   inputWidthClassName?: string // e.g. "w-16"
   className?: string
 }
@@ -25,6 +26,7 @@ export function SliderNumberInput({
   step = 1,
   inputWidthClassName = 'w-16',
   className,
+  sliderTitle,
 }: SliderNumberInputProps) {
   const clamp = React.useCallback(
     (n: number) => Math.min(max, Math.max(min, n)),
@@ -40,7 +42,7 @@ export function SliderNumberInput({
           max={max}
           step={step}
           value={[value]}
-          title="Lower if there is centre-pull"
+          title={sliderTitle}
           onValueChange={(v) => onValueChange(clamp(v[0]))}
         />
 

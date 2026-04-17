@@ -1,17 +1,28 @@
 import { create } from 'zustand'
+import type { SensorOffsetValues } from '@/lib/config-file'
 import type { Event } from '../types/annotations'
 
 interface EventState {
-  recordingId: string
+  eventOriginTimestampNs: number
   events: Array<Event>
   gazeStartTime: number
-  eventOriginTimestampNs: number
+  recordingId: string
   addEvent: (event: Event) => void
-  setEvents: (events: Array<Event>) => void
-  renameEvent: (oldName: string, newName: string) => void
   removeEvent: (timestamp_ns: number) => void
   removeEvents: () => void
+  renameEvent: (oldName: string, newName: string) => void
+  sensorOffsets: SensorOffsetValues
+  setEvents: (events: Array<Event>) => void
+  setRotationOffset: (
+    axis: keyof SensorOffsetValues['rotationDeg'],
+    value: number,
+  ) => void
+  setSensorOffsets: (offsets: SensorOffsetValues) => void
   setRecordingId: (recordingId: string) => void
+  setTranslationOffset: (
+    axis: keyof SensorOffsetValues['translationMm'],
+    value: number,
+  ) => void
   setGazeStartTime: (timestamp_ns: number) => void
   setEventOriginTimestampNs: (timestamp_ns: number) => void
 }
@@ -21,6 +32,10 @@ export const useEventStore = create<EventState>((set) => ({
   events: [],
   gazeStartTime: 0,
   eventOriginTimestampNs: 0,
+  sensorOffsets: {
+    translationMm: { x: 0, y: 0, z: 0 },
+    rotationDeg: { x: 0, y: 0, z: 0 },
+  },
   addEvent: (event: Event) =>
     set((state) => {
       const { events } = state
@@ -50,6 +65,27 @@ export const useEventStore = create<EventState>((set) => ({
       ),
     })),
   removeEvents: () => set({ events: [] }),
+  setSensorOffsets: (sensorOffsets: SensorOffsetValues) => set({ sensorOffsets }),
+  setTranslationOffset: (axis, value) =>
+    set((state) => ({
+      sensorOffsets: {
+        ...state.sensorOffsets,
+        translationMm: {
+          ...state.sensorOffsets.translationMm,
+          [axis]: value,
+        },
+      },
+    })),
+  setRotationOffset: (axis, value) =>
+    set((state) => ({
+      sensorOffsets: {
+        ...state.sensorOffsets,
+        rotationDeg: {
+          ...state.sensorOffsets.rotationDeg,
+          [axis]: value,
+        },
+      },
+    })),
   setRecordingId: (recordingId: string) => set({ recordingId }),
   setGazeStartTime: (timestamp_ns: number) =>
     set({ gazeStartTime: timestamp_ns }),

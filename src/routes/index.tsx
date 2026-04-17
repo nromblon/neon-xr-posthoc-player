@@ -2,7 +2,7 @@ import { Label } from '@radix-ui/react-label'
 import { createFileRoute } from '@tanstack/react-router'
 import React, { useRef } from 'react'
 import Color from 'color'
-import { BookXIcon, SkipBackIcon, SkipForwardIcon } from 'lucide-react'
+import { BookXIcon, SaveIcon, SkipBackIcon, SkipForwardIcon } from 'lucide-react'
 import { Toast } from 'radix-ui'
 import type { FolderPickEntry } from '@/components/ui/folder-picker'
 import { FolderPicker } from '@/components/ui/folder-picker'
@@ -27,6 +27,11 @@ import {
 } from '@/components/ui/empty'
 import { Button } from '@/components/ui/button'
 import { useEventPersistence } from '@/hooks/use-event-persistence'
+import {
+  formatTruncatedDecimals,
+  readConfigOffsets,
+  saveModifiedConfigFile,
+} from '@/lib/config-file'
 import { useEventStore } from '@/store/eventStore'
 import {
   Accordion,
@@ -50,7 +55,7 @@ const SCENE_VIDEO_EXTENSIONS = new Set([
 function App() {
   const [radius, setRadius] = React.useState(14)
   const [stroke, setStroke] = React.useState(5)
-  const [color, setColor] = React.useState('#000000AB')
+  const [color, setColor] = React.useState('#FF0000')
 
   const folderPickerRef = useRef<HTMLInputElement | null>(null)
   const [folderPickerKey, setFolderPickerKey] = React.useState(0)
@@ -58,6 +63,12 @@ function App() {
   const [packagePickerKey, setPackagePickerKey] = React.useState(0)
   const videoInputRef = useRef<HTMLInputElement | null>(null)
   const configInputRef = useRef<HTMLInputElement | null>(null)
+  const xTranslateOffsetRef = useRef<HTMLInputElement | null>(null)
+  const yTranslateOffsetRef = useRef<HTMLInputElement | null>(null)
+  const zTranslateOffsetRef = useRef<HTMLInputElement | null>(null)
+  const xRotationOffsetRef = useRef<HTMLInputElement | null>(null)
+  const yRotationOffsetRef = useRef<HTMLInputElement | null>(null)
+  const zRotationOffsetRef = useRef<HTMLInputElement | null>(null)
 
   // File-related states
   // Gaze Data
@@ -65,10 +76,14 @@ function App() {
   const [eventsFile, setEventsFile] = React.useState<File | null>(null)
   const [eventsDirectoryHandle, setEventsDirectoryHandle] =
     React.useState<FileSystemDirectoryHandle | null>(null)
+  const [recordingDirectoryHandle, setRecordingDirectoryHandle] =
+    React.useState<FileSystemDirectoryHandle | null>(null)
   const [shouldShowGazeError, showGazeError] = React.useState(false)
   const [selectionErrorMessage, setSelectionErrorMessage] = React.useState(
     "Unable to find valid gaze data file. Please select a folder containing 'gaze.csv'.",
   )
+  const [shouldShowConfigSavedToast, setShouldShowConfigSavedToast] =
+    React.useState(false)
   const [selectedGazeFolderLabel, setSelectedGazeFolderLabel] =
     React.useState('')
   // Scene Video Data
@@ -80,8 +95,14 @@ function App() {
 
   const videoRef = useRef<HTMLVideoElement>(null)
   const gazeStartMs = useEventStore((state) => state.gazeStartTime)
+  const sensorOffsets = useEventStore((state) => state.sensorOffsets)
   const setGazeStartTimeInStore = useEventStore(
     (state) => state.setGazeStartTime,
+  )
+  const setRotationOffset = useEventStore((state) => state.setRotationOffset)
+  const setSensorOffsets = useEventStore((state) => state.setSensorOffsets)
+  const setTranslationOffset = useEventStore(
+    (state) => state.setTranslationOffset,
   )
   const { isSaving: isSavingEvents } = useEventPersistence({
     eventsDirectoryHandle,
@@ -115,6 +136,10 @@ function App() {
   }
 
   const findConfigEntry = (entries: Array<FolderPickEntry>) =>
+    entries.find((entry) => {
+      const segments = entry.relativePath.split('/')
+      return segments.length === 2 && entry.file.name === 'config_modified.json'
+    }) ??
     entries.find((entry) => {
       const segments = entry.relativePath.split('/')
       return segments.length === 2 && entry.file.name === 'config.json'
@@ -215,9 +240,11 @@ function App() {
     const configEntry = findConfigEntry(normalizedEntries)
     const dataFolderName = findDataFolderName(normalizedEntries)
 
+    setRecordingDirectoryHandle(directoryHandle ?? null)
+
     if (!sceneEntry || !configEntry || !dataFolderName) {
       showSelectionError(
-        "Unable to auto-select files. Expected a top-level 'scene*' video, a 'data*' folder, and 'config.json'.",
+        "Unable to auto-select files. Expected a top-level 'scene*' video, a 'data*' folder, and either 'config_modified.json' or 'config.json'.",
       )
       setPackagePickerKey((k) => k + 1)
       if (packagePickerRef.current) {
@@ -309,11 +336,169 @@ function App() {
     setGazeStartTime(gazeStartMs + direction * frameDurationMs)
   }
 
+  const handleOffsetInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { id, value } = e.currentTarget
+
+    if (value === '' || value === '-' || value.endsWith('.')) {
+      return
+    }
+
+    const numericValue = Number(value)
+    if (!Number.isFinite(numericValue)) {
+      return
+    }
+
+    const nextValue = parseFloat(formatTruncatedDecimals(numericValue, 2))
+
+    if (id === 'x-translate-offset') {
+      setTranslationOffset('x', nextValue)
+      return
+    }
+    if (id === 'y-translate-offset') {
+      setTranslationOffset('y', nextValue)
+      return
+    }
+    if (id === 'z-translate-offset') {
+      setTranslationOffset('z', nextValue)
+      return
+    }
+    if (id === 'x-rotation-offset') {
+      setRotationOffset('x', nextValue)
+      return
+    }
+    if (id === 'y-rotation-offset') {
+      setRotationOffset('y', nextValue)
+      return
+    }
+    if (id === 'z-rotation-offset') {
+      setRotationOffset('z', nextValue)
+    }
+  }
+
+  const handleOffsetInputBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    const { id } = e.currentTarget
+
+    if (id === 'x-translate-offset') {
+      e.currentTarget.value = formatTruncatedDecimals(
+        sensorOffsets.translationMm.x,
+        2,
+      )
+      return
+    }
+    if (id === 'y-translate-offset') {
+      e.currentTarget.value = formatTruncatedDecimals(
+        sensorOffsets.translationMm.y,
+        2,
+      )
+      return
+    }
+    if (id === 'z-translate-offset') {
+      e.currentTarget.value = formatTruncatedDecimals(
+        sensorOffsets.translationMm.z,
+        2,
+      )
+      return
+    }
+    if (id === 'x-rotation-offset') {
+      e.currentTarget.value = formatTruncatedDecimals(
+        sensorOffsets.rotationDeg.x,
+        2,
+      )
+      return
+    }
+    if (id === 'y-rotation-offset') {
+      e.currentTarget.value = formatTruncatedDecimals(
+        sensorOffsets.rotationDeg.y,
+        2,
+      )
+      return
+    }
+    if (id === 'z-rotation-offset') {
+      e.currentTarget.value = formatTruncatedDecimals(
+        sensorOffsets.rotationDeg.z,
+        2,
+      )
+    }
+  }
+
+  const handleConfigSave = async () => {
+    if (!configFile) {
+      return
+    }
+
+    try {
+      const modifiedConfigFile = await saveModifiedConfigFile(
+        configFile,
+        sensorOffsets,
+        recordingDirectoryHandle,
+      )
+      setConfigFile(modifiedConfigFile)
+      setInputFiles(configInputRef.current, [modifiedConfigFile])
+      setShouldShowConfigSavedToast(true)
+    } catch (error) {
+      console.error('Failed to save config_modified.json:', error)
+    }
+  }
+
   const sectionLabelClassName = 'text-sm font-medium'
-  const sectionContentClassName = 'space-y-4'
+  const sectionContentClassName = 'flex flex-col gap-2'
+
+  React.useEffect(() => {
+    const updateOffsetInputValues = async () => {
+      if (!configFile) {
+        return
+      }
+
+      try {
+        const offsets = await readConfigOffsets(configFile)
+        setSensorOffsets(offsets)
+
+        if (xTranslateOffsetRef.current) {
+          xTranslateOffsetRef.current.value = formatTruncatedDecimals(
+            offsets.translationMm.x,
+            2,
+          )
+        }
+        if (yTranslateOffsetRef.current) {
+          yTranslateOffsetRef.current.value = formatTruncatedDecimals(
+            offsets.translationMm.y,
+            2,
+          )
+        }
+        if (zTranslateOffsetRef.current) {
+          zTranslateOffsetRef.current.value = formatTruncatedDecimals(
+            offsets.translationMm.z,
+            2,
+          )
+        }
+        if (xRotationOffsetRef.current) {
+          xRotationOffsetRef.current.value = formatTruncatedDecimals(
+            offsets.rotationDeg.x,
+            2,
+          )
+        }
+        if (yRotationOffsetRef.current) {
+          yRotationOffsetRef.current.value = formatTruncatedDecimals(
+            offsets.rotationDeg.y,
+            2,
+          )
+        }
+        if (zRotationOffsetRef.current) {
+          zRotationOffsetRef.current.value = formatTruncatedDecimals(
+            offsets.rotationDeg.z,
+            2,
+          )
+        }
+      } catch (error) {
+        console.error('Failed to parse config.json offsets:', error)
+      }
+    }
+
+    void updateOffsetInputValues()
+  }, [configFile, setSensorOffsets])
 
   return (
-    <div className="display flex justify-between items-start my-4">
+    <div className="flex justify-between items-start my-4">
       <div
         id="video-div"
         className="flex items-center justify-center h-full flex-1"
@@ -325,6 +510,7 @@ function App() {
             videoFile={videoFile}
             xrConfigFile={configFile}
             fovHorizontalDeg={fovHorizontalDeg}
+            sensorOffsets={sensorOffsets}
             circleConfig={{ stroke, radius, color }}
             isSavingEvents={isSavingEvents}
             onFrameDurationChange={(frameDurationSeconds) => {
@@ -349,7 +535,7 @@ function App() {
       </div>
       <div
         id="settings-div"
-        className="display flex flex-col align-top gap-2 p-5 mx-5 border h-max w-96 rounded-lg"
+        className="flex flex-col align-top gap-2 p-5 mx-5 border h-max w-96 rounded-lg"
       >
         <Accordion type="multiple">
           <AccordionItem value="setup">
@@ -377,11 +563,12 @@ function App() {
                   )
                 }}
               />
+
               <div
                 id="setup-specifics"
-                className="display flex flex-col gap-2 p-4 border-2 border-accent rounded-md"
+                className="flex flex-col gap-2 p-4 border-2 border-accent rounded-md"
               >
-                <Label className={'text-sm'} htmlFor="xr-file-upload">
+                <Label className={'text-xs'} htmlFor="xr-file-upload">
                   XR Video (Scene Video)
                 </Label>
                 <Input
@@ -396,7 +583,7 @@ function App() {
                     }
                   }}
                 />
-                <Label className={'text-sm'} htmlFor="neon-gaze-upload">
+                <Label className={'text-xs'} htmlFor="neon-gaze-upload">
                   Neon Gaze Data
                 </Label>
                 <FolderPicker
@@ -418,7 +605,7 @@ function App() {
                     {selectionErrorMessage}
                   </Toast.Description>
                 </Toast.Root>
-                <Label className={'text sm'} htmlFor="calibration-file-upload">
+                <Label className={'text-xs'} htmlFor="calibration-file-upload">
                   Neon XR Calibration File (config.json)
                 </Label>
                 <Input
@@ -434,17 +621,140 @@ function App() {
                   }}
                 />
               </div>
-
-              <Label className={sectionLabelClassName} htmlFor="recording-fov">
-                Horizontal FOV
-              </Label>
-              <SliderNumberInput
-                id="recording-fov"
-                value={fovHorizontalDeg}
-                onValueChange={setFovHorizontalDeg}
-                min={45}
-                max={120}
-              />
+              <div className='flex w-full items-center justify-between'>
+                <Label className={sectionLabelClassName} htmlFor="recording-fov">
+                  Projector Settings
+                </Label>
+                <Button
+                  id='config-save'
+                  variant={'outline'}
+                  size={'icon'}
+                  title='Save to config_modified.json'
+                  disabled={!configFile}
+                  onClick={() => {
+                    void handleConfigSave()
+                  }}
+                >
+                  <SaveIcon className="h-2 w-2" />
+                </Button>
+              </div>
+              <div
+                id="projector-settings"
+                className="flex flex-col gap-2 p-4 border-2 border-accent rounded-md"
+              >
+                  <Label className='text-sm' htmlFor="recording-fov">
+                    Horizontal FOV
+                  </Label>
+                  <SliderNumberInput
+                    id="recording-fov"
+                    value={fovHorizontalDeg}
+                    onValueChange={setFovHorizontalDeg}
+                    sliderTitle='Lower if there is centre pull'
+                    min={45}
+                    max={120}
+                  />
+                  <Label className={sectionLabelClassName} htmlFor="sensor-offsets">
+                    Sensor Offsets
+                  </Label>
+                  <Label className='text-sm' htmlFor="sensor-translation-offsets">
+                    Translation (mm)
+                  </Label>
+                  <div
+                    id="sensor-translation-offsets"
+                    className="flex flex-row items-center justify-center gap-2 text-xs"
+                  >
+                    x
+                    <Input
+                      ref={xTranslateOffsetRef}
+                      id="x-translate-offset"
+                      type="number"
+                      min={0}
+                      step='0.01'
+                      className="h-8 w-18 text-xs p-1.5"
+                      onChange={handleOffsetInputChange}
+                      onBlur={handleOffsetInputBlur}
+                    />
+                    y
+                    <Input
+                      ref={yTranslateOffsetRef}
+                      id="y-translate-offset"
+                      type="number"
+                      min={0}
+                      step='0.01'
+                      className="h-8 w-18 text-xs p-1.5"
+                      onChange={handleOffsetInputChange}
+                      onBlur={handleOffsetInputBlur}
+                    />
+                    z
+                    <Input
+                      ref={zTranslateOffsetRef}
+                      id="z-translate-offset"
+                      type="number"
+                      min={0}
+                      step='0.01'
+                      className="h-8 w-18 text-xs p-1.5"
+                      onChange={handleOffsetInputChange}
+                      onBlur={handleOffsetInputBlur}
+                    />
+                  </div>
+                  <Label className='text-sm' htmlFor="sensor-rotation-offsets">
+                    Rotation (degrees)
+                  </Label>
+                  <div
+                    id="sensor-rotation-offsets"
+                    className="flex flex-row items-center justify-center gap-2 text-xs"
+                  >
+                    x
+                    <Input
+                      ref={xRotationOffsetRef}
+                      id="x-rotation-offset"
+                      type="number"
+                      min={0}
+                      max={360}
+                      step='0.01'
+                      className="h-8 w-18 text-xs p-1.5"
+                      onChange={handleOffsetInputChange}
+                      onBlur={handleOffsetInputBlur}
+                    />
+                    y
+                    <Input
+                      ref={yRotationOffsetRef}
+                      id="y-rotation-offset"
+                      type="number"
+                      min={0}
+                      max={360}
+                      step='0.01'
+                      className="h-8 w-18 text-xs p-1.5"
+                      onChange={handleOffsetInputChange}
+                      onBlur={handleOffsetInputBlur}
+                    />
+                    z
+                    <Input
+                      ref={zRotationOffsetRef}
+                      id="z-rotation-offset"
+                      type="number"
+                      min={0}
+                      max={360}
+                      step='0.01'
+                      className="h-8 w-18 text-xs p-1.5"
+                      onChange={handleOffsetInputChange}
+                      onBlur={handleOffsetInputBlur}
+                    />
+                  </div>
+              </div>
+              <Toast.Root
+                className="ToastRoot flex w-80 flex-col items-start justify-center gap-2 rounded-lg bg-emerald-600 p-4 shadow-sm"
+                open={shouldShowConfigSavedToast}
+                duration={3000}
+                onOpenChange={setShouldShowConfigSavedToast}
+              >
+                <Toast.Title className="text-md font-medium text-white">
+                  Config Saved
+                </Toast.Title>
+                <Toast.Description className="text-sm text-white">
+                  Saved the updated offsets to config_modified.json.
+                </Toast.Description>
+              </Toast.Root>
             </AccordionContent>
           </AccordionItem>
           <AccordionItem value="adjust">
