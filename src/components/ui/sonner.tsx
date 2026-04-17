@@ -14,8 +14,6 @@ const Toaster = ({ ...props }: ToasterProps) => {
 
   return (
     <Sonner
-      closeButton
-      expand
       offset={20}
       visibleToasts={4}
       theme={theme as ToasterProps["theme"]}
@@ -39,8 +37,6 @@ const Toaster = ({ ...props }: ToasterProps) => {
             "group-[.toast]:rounded-md group-[.toast]:bg-foreground group-[.toast]:text-background group-[.toast]:font-medium",
           cancelButton:
             "group-[.toast]:rounded-md group-[.toast]:border group-[.toast]:bg-transparent group-[.toast]:font-medium",
-          closeButton:
-            "group-[.toast]:border group-[.toast]:border-border/70 group-[.toast]:bg-background/80 group-[.toast]:text-muted-foreground group-[.toast]:shadow-none group-[.toast]:hover:bg-muted group-[.toast]:hover:text-foreground",
           success:
             "group-[.toaster]:border-emerald-200 group-[.toaster]:bg-emerald-50 group-[.toaster]:text-emerald-950",
           info:
