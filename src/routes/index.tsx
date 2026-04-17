@@ -39,6 +39,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion'
+import { InputGroupInput } from '@/components/ui/input-group'
 
 export const Route = createFileRoute('/')({ component: App })
 
@@ -730,16 +731,29 @@ function App() {
           </AccordionItem>
           <AccordionItem value="adjust">
             <AccordionTrigger className="text-lg font-semibold">
-              Align
+              Adjustments
             </AccordionTrigger>
             <AccordionContent className={sectionContentClassName}>
-              <Button
-                onClick={setCurrentTimeAsGazeStart}
-                disabled={!videoFile || !gazeFile || !configFile}
-                className="w-full"
-              >
-                Set Current Time as Gaze Start Time
-              </Button>
+              <Label className={sectionLabelClassName} htmlFor="adjustments-file-upload">
+                Adjustments Metadata
+              </Label>
+              <div className='flex w-full items-center gap-2 justify-between'>
+              <Input
+                  ref={configInputRef}
+                  id="adjustments-file-upload"
+                  type="file"
+                  className="text-muted-foreground"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) {
+                      // adjustment file handling not implemented yet,
+                    }
+                  }}
+                />
+                <Button size='icon' variant='outline' title='Save to player_adjustments.json' >
+                  <SaveIcon className="h-4 w-4" />
+                </Button>
+              </div>
               <Label
                 className={sectionLabelClassName}
                 htmlFor="gaze-start-time"
@@ -803,6 +817,36 @@ function App() {
                   <SkipForwardIcon />
                 </Button>
               </div>
+              <Button
+                onClick={setCurrentTimeAsGazeStart}
+                disabled={!videoFile || !gazeFile || !configFile}
+                className="w-full"
+              >
+                Set Current Time as Gaze Start Time
+              </Button>
+              <Label className={sectionLabelClassName} htmlFor="player-gaze-offset">
+                2D Gaze Offset
+              </Label>
+              <div
+                id="player-gaze-offset"
+                className="flex flex-row items-center gap-2 text-xs"
+              >
+                x
+                <Input
+                  id="x-2dgaze-offset"
+                  defaultValue={0}
+                  type="number"
+                  className="h-8 w-22 text-xs p-1.5"
+                />
+                y
+                <Input
+                  id="y-2dgaze-offset"
+                  defaultValue={0}
+                  type="number"
+                  className="h-8 w-22 text-xs p-1.5"
+                />
+                </div>
+
             </AccordionContent>
           </AccordionItem>
           <AccordionItem value="visualizer-style">
