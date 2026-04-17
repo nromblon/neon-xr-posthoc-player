@@ -1,14 +1,14 @@
 import { SearchIcon } from 'lucide-react'
 import React from 'react'
 
+import { Spinner } from '../ui/spinner'
+import { EventRow } from './event-row'
+import type { Event as AnnotationEvent } from '@/types/annotations'
 import { Button } from '@/components/ui/button'
 import { InputGroup, InputGroupInput } from '@/components/ui/input-group'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useEventStore } from '@/store/eventStore'
-import type { Event as AnnotationEvent } from '@/types/annotations'
-import { EventRow } from './event-row'
 import { Badge } from '@/components/ui/badge'
-import { Spinner } from '../ui/spinner'
 
 const TIMELINE_PLAYHEAD = '#6366f1'
 const LOCKED_EVENT_NAMES = new Set(['recording.begin', 'recording.end'])
@@ -17,7 +17,7 @@ export interface VideoEventsTimelineProps {
   currentTime: number
   duration: number
   eventNameColumnWidthPx: number
-  events: AnnotationEvent[]
+  events: Array<AnnotationEvent>
   formatTime: (seconds: number) => string
   isSaving: boolean
   onSeek: (nextTime: number) => void
@@ -52,7 +52,7 @@ export const VideoEventsTimeline: React.FC<VideoEventsTimelineProps> = ({
       existingGroup.push(eventItem)
       groups.set(eventItem.name, existingGroup)
       return groups
-    }, new Map<string, AnnotationEvent[]>()),
+    }, new Map<string, Array<AnnotationEvent>>()),
   )
 
   const timelineGridTemplate = `${eventNameColumnWidthPx}px minmax(0, 1fr)`

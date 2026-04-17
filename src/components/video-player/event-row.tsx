@@ -7,7 +7,7 @@ interface EventRowProps {
   editingEventName: string | null
   eventName: string
   eventNameColumnWidthPx: number
-  eventItems: AnnotationEvent[]
+  eventItems: Array<AnnotationEvent>
   isLocked: boolean
   onCommitEventName: (eventName: string) => void
   onDeleteEvent: (

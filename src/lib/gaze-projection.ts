@@ -47,8 +47,8 @@ export interface VideoParams {
   videoWidth: number
   videoHeight: number
   fovHorizontalDeg: number
-  gazeOffsetX?: number  // pixels, default 0
-  gazeOffsetY?: number  // pixels, default 0
+  gazeOffsetX?: number // pixels, default 0
+  gazeOffsetY?: number // pixels, default 0
 }
 
 /** A built projector — construct once, reuse for all samples in a recording */
@@ -148,7 +148,7 @@ function projectRayToFrame(
   mountPosition: vec3,
   K: CameraIntrinsics,
   gazeOffsetX: number,
-  gazeOffsetY: number
+  gazeOffsetY: number,
 ): GazeProjectionResult {
   // Ray must be facing forward (positive Z) to land on screen
   if (rayQuest[2] <= 0) {
@@ -195,31 +195,42 @@ export function buildProjector(
 
   const r = configJson.sensorCalibration.offset.rotation
   // config.json stores rotation as Euler angles in degrees (x=pitch, y=yaw, z=roll)
-  // Unity's default Euler order is ZXY (applied as: roll first, then pitch, then yaw)  
+  // Unity's default Euler order is ZXY (applied as: roll first, then pitch, then yaw)
   // // quat.fromEuler expects (out, x_deg, y_deg, z_deg) and uses ZXY order internally
   // If ZXY (default Unity) doesn't look right, try:
   // quat.fromEuler(mountQuat, r.y, r.x, r.z); // swap pitch/yaw if off
   const mountQuat = quat.create()
-  console.log('rebuilding projector');
-  quat.fromEuler(mountQuat, r.x, r.y, r.z)  // standard order, no sign changes
+  console.log('rebuilding projector')
+  quat.fromEuler(mountQuat, r.x, r.y, r.z) // standard order, no sign changes
 
   // Extract position offset — stored in metres in config.json
-  const p = configJson.sensorCalibration.offset.position;
-  const mountPosition = vec3.fromValues(p.x, -p.y, p.z);
+  const p = configJson.sensorCalibration.offset.position
+  const mountPosition = vec3.fromValues(p.x, -p.y, p.z)
 
   const fx = videoWidth / 2 / Math.tan(toRad(fovHorizontalDeg) / 2)
   const fy = fx
   const cx = videoWidth / 2
   const cy = videoHeight / 2
 
-  return { mountQuat, mountPosition, K: { fx, fy, cx, cy }, videoWidth, videoHeight, gazeOffsetX: videoParams.gazeOffsetX || 0, gazeOffsetY: videoParams.gazeOffsetY || 0 }
+  return {
+    mountQuat,
+    mountPosition,
+    K: { fx, fy, cx, cy },
+    videoWidth,
+    videoHeight,
+    gazeOffsetX: videoParams.gazeOffsetX || 0,
+    gazeOffsetY: videoParams.gazeOffsetY || 0,
+  }
 }
 
 export function debugProjector(projector: Projector): void {
   // Test ray pointing straight ahead (azimuth=0, elevation=0)
   const rayStraight = azElToRayScene(0, 0)
-  const rotatedStraight = rotateRayToQuestSpace(rayStraight, projector.mountQuat)
-  
+  const rotatedStraight = rotateRayToQuestSpace(
+    rayStraight,
+    projector.mountQuat,
+  )
+
   // Test ray pointing 10° up (azimuth=0, elevation=10)
   const rayUp = azElToRayScene(0, 10)
   const rotatedUp = rotateRayToQuestSpace(rayUp, projector.mountQuat)
@@ -229,38 +240,55 @@ export function debugProjector(projector: Projector): void {
   const rotatedRight = rotateRayToQuestSpace(rayRight, projector.mountQuat)
 
   console.table({
-    'straight ahead': { 
-      scene: Array.from(rayStraight).map(v => v.toFixed(4)),
-      quest: Array.from(rotatedStraight).map(v => v.toFixed(4))
+    'straight ahead': {
+      scene: Array.from(rayStraight).map((v) => v.toFixed(4)),
+      quest: Array.from(rotatedStraight).map((v) => v.toFixed(4)),
     },
     '10° up': {
-      scene: Array.from(rayUp).map(v => v.toFixed(4)),
-      quest: Array.from(rotatedUp).map(v => v.toFixed(4))
+      scene: Array.from(rayUp).map((v) => v.toFixed(4)),
+      quest: Array.from(rotatedUp).map((v) => v.toFixed(4)),
     },
     '10° right': {
-      scene: Array.from(rayRight).map(v => v.toFixed(4)),
-      quest: Array.from(rotatedRight).map(v => v.toFixed(4))
+      scene: Array.from(rayRight).map((v) => v.toFixed(4)),
+      quest: Array.from(rotatedRight).map((v) => v.toFixed(4)),
     },
   })
 
-  console.log('mountQuat:', Array.from(projector.mountQuat).map(v => v.toFixed(6)))
-  console.log('mountPosition:', Array.from(projector.mountPosition).map(v => v.toFixed(4)))
+  console.log(
+    'mountQuat:',
+    Array.from(projector.mountQuat).map((v) => v.toFixed(6)),
+  )
+  console.log(
+    'mountPosition:',
+    Array.from(projector.mountPosition).map((v) => v.toFixed(4)),
+  )
   console.log('K:', projector.K)
 
-    // Also project to pixels
+  // Also project to pixels
   const straight = projectGazeSample(projector, 0, 0)
   const up10 = projectGazeSample(projector, 0, 10)
   const down10 = projectGazeSample(projector, 0, -10)
   const right10 = projectGazeSample(projector, 10, 0)
 
   console.table({
-    'straight (az=0, el=0)':   { x: straight.x?.toFixed(1), y: straight.y?.toFixed(1) },
-    '10° up   (az=0, el=+10)': { x: up10.x?.toFixed(1),     y: up10.y?.toFixed(1) },
-    '10° down (az=0, el=-10)': { x: down10.x?.toFixed(1),   y: down10.y?.toFixed(1) },
-    '10° right(az=10, el=0)':  { x: right10.x?.toFixed(1),  y: right10.y?.toFixed(1) },
+    'straight (az=0, el=0)': {
+      x: straight.x?.toFixed(1),
+      y: straight.y?.toFixed(1),
+    },
+    '10° up   (az=0, el=+10)': { x: up10.x?.toFixed(1), y: up10.y?.toFixed(1) },
+    '10° down (az=0, el=-10)': {
+      x: down10.x?.toFixed(1),
+      y: down10.y?.toFixed(1),
+    },
+    '10° right(az=10, el=0)': {
+      x: right10.x?.toFixed(1),
+      y: right10.y?.toFixed(1),
+    },
   })
 
-  console.log(`Video: ${projector.videoWidth}x${projector.videoHeight}, centre: (${projector.K.cx}, ${projector.K.cy})`)
+  console.log(
+    `Video: ${projector.videoWidth}x${projector.videoHeight}, centre: (${projector.K.cx}, ${projector.K.cy})`,
+  )
 }
 
 /**
@@ -277,7 +305,13 @@ export function projectGazeSample(
 ): GazeProjectionResult {
   const rayScene = azElToRayScene(azimuthDeg, elevationDeg)
   const rayQuest = rotateRayToQuestSpace(rayScene, projector.mountQuat)
-  return projectRayToFrame(rayQuest, projector.mountPosition, projector.K, projector.gazeOffsetX, projector.gazeOffsetY)
+  return projectRayToFrame(
+    rayQuest,
+    projector.mountPosition,
+    projector.K,
+    projector.gazeOffsetX,
+    projector.gazeOffsetY,
+  )
 }
 
 /**
@@ -292,8 +326,8 @@ export function projectGazeSample(
  */
 export function projectGazeCSV(
   projector: Projector,
-  rows: GazeCSVRow[],
-): ProjectedGazeSample[] {
+  rows: Array<GazeCSVRow>,
+): Array<ProjectedGazeSample> {
   return rows.map((row): ProjectedGazeSample => {
     const timestamp_ns = parseInt(String(row['timestamp [ns]']), 10)
     const az = parseFloat(String(row['azimuth [deg]']))

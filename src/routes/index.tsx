@@ -4,8 +4,8 @@ import React, { useRef } from 'react'
 import Color from 'color'
 import { BookXIcon, SkipBackIcon, SkipForwardIcon } from 'lucide-react'
 import { Toast } from 'radix-ui'
-import { FolderPicker } from '@/components/ui/folder-picker'
 import type { FolderPickEntry } from '@/components/ui/folder-picker'
+import { FolderPicker } from '@/components/ui/folder-picker'
 import { Input } from '@/components/ui/input'
 import {
   ColorPicker,
@@ -28,7 +28,12 @@ import {
 import { Button } from '@/components/ui/button'
 import { useEventPersistence } from '@/hooks/use-event-persistence'
 import { useEventStore } from '@/store/eventStore'
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion'
 
 export const Route = createFileRoute('/')({ component: App })
 
@@ -64,7 +69,8 @@ function App() {
   const [selectionErrorMessage, setSelectionErrorMessage] = React.useState(
     "Unable to find valid gaze data file. Please select a folder containing 'gaze.csv'.",
   )
-  const [selectedGazeFolderLabel, setSelectedGazeFolderLabel] = React.useState('')
+  const [selectedGazeFolderLabel, setSelectedGazeFolderLabel] =
+    React.useState('')
   // Scene Video Data
   const [videoFile, setVideoFile] = React.useState<File | null>(null)
   // Calibration Config Data
@@ -108,13 +114,13 @@ function App() {
     return null
   }
 
-  const findConfigEntry = (entries: FolderPickEntry[]) =>
+  const findConfigEntry = (entries: Array<FolderPickEntry>) =>
     entries.find((entry) => {
       const segments = entry.relativePath.split('/')
       return segments.length === 2 && entry.file.name === 'config.json'
     })
 
-  const findSceneVideoEntry = (entries: FolderPickEntry[]) =>
+  const findSceneVideoEntry = (entries: Array<FolderPickEntry>) =>
     entries.find((entry) => {
       const segments = entry.relativePath.split('/')
       if (segments.length !== 2) {
@@ -131,7 +137,7 @@ function App() {
       )
     })
 
-  const findDataFolderName = (entries: FolderPickEntry[]) => {
+  const findDataFolderName = (entries: Array<FolderPickEntry>) => {
     const folderNames = new Set(
       entries
         .map((entry) => entry.relativePath.split('/')[1])
@@ -148,10 +154,7 @@ function App() {
     showGazeError(true)
   }
 
-  const setInputFiles = (
-    input: HTMLInputElement | null,
-    files: File[],
-  ) => {
+  const setInputFiles = (input: HTMLInputElement | null, files: Array<File>) => {
     if (!input) {
       return
     }
@@ -205,9 +208,7 @@ function App() {
       entries ??
       Array.from(files).map((file) => ({
         file,
-        relativePath:
-          (file as File & { webkitRelativePath?: string }).webkitRelativePath ??
-          `${folderName}/${file.name}`,
+        relativePath: file.webkitRelativePath || `${folderName}/${file.name}`,
       }))
 
     const sceneEntry = findSceneVideoEntry(normalizedEntries)
@@ -255,9 +256,8 @@ function App() {
 
     if (directoryHandle) {
       try {
-        const dataDirectoryHandle = await directoryHandle.getDirectoryHandle(
-          dataFolderName,
-        )
+        const dataDirectoryHandle =
+          await directoryHandle.getDirectoryHandle(dataFolderName)
         setEventsDirectoryHandle(dataDirectoryHandle)
       } catch {
         setEventsDirectoryHandle(null)
@@ -353,7 +353,9 @@ function App() {
       >
         <Accordion type="multiple">
           <AccordionItem value="setup">
-            <AccordionTrigger className='text-lg font-semibold'>Setup</AccordionTrigger>
+            <AccordionTrigger className="text-lg font-semibold">
+              Setup
+            </AccordionTrigger>
             <AccordionContent className={sectionContentClassName}>
               <Label
                 className={sectionLabelClassName}
@@ -364,7 +366,7 @@ function App() {
               <FolderPicker
                 key={packagePickerKey}
                 inputRef={packagePickerRef}
-                buttonLabel="Upload Folder"
+                buttonLabel="Choose Folder"
                 placeholder="Choose a recording folder"
                 onPick={(files, folderName, directoryHandle, entries) => {
                   void handlePackageFolderPick(
@@ -375,7 +377,10 @@ function App() {
                   )
                 }}
               />
-              <div id='setup-specifics' className='display flex flex-col gap-2 p-4 border-2 border-accent rounded-md'>
+              <div
+                id="setup-specifics"
+                className="display flex flex-col gap-2 p-4 border-2 border-accent rounded-md"
+              >
                 <Label className={'text-sm'} htmlFor="xr-file-upload">
                   XR Video (Scene Video)
                 </Label>
@@ -413,10 +418,7 @@ function App() {
                     {selectionErrorMessage}
                   </Toast.Description>
                 </Toast.Root>
-                <Label
-                  className={'text sm'}
-                  htmlFor="calibration-file-upload"
-                >
+                <Label className={'text sm'} htmlFor="calibration-file-upload">
                   Neon XR Calibration File (config.json)
                 </Label>
                 <Input
@@ -446,7 +448,9 @@ function App() {
             </AccordionContent>
           </AccordionItem>
           <AccordionItem value="adjust">
-            <AccordionTrigger className='text-lg font-semibold'>Align</AccordionTrigger>
+            <AccordionTrigger className="text-lg font-semibold">
+              Align
+            </AccordionTrigger>
             <AccordionContent className={sectionContentClassName}>
               <Button
                 onClick={setCurrentTimeAsGazeStart}
@@ -455,10 +459,16 @@ function App() {
               >
                 Set Current Time as Gaze Start Time
               </Button>
-              <Label className={sectionLabelClassName} htmlFor="gaze-start-time">
+              <Label
+                className={sectionLabelClassName}
+                htmlFor="gaze-start-time"
+              >
                 Gaze Start Time
               </Label>
-              <div id="gaze-start-time" className="flex flex-row items-center gap-2">
+              <div
+                id="gaze-start-time"
+                className="flex flex-row items-center gap-2"
+              >
                 <Button
                   type="button"
                   variant="outline"
@@ -515,7 +525,9 @@ function App() {
             </AccordionContent>
           </AccordionItem>
           <AccordionItem value="visualizer-style">
-            <AccordionTrigger className='text-lg font-semibold'>Gaze Visualizer Style</AccordionTrigger>
+            <AccordionTrigger className="text-lg font-semibold">
+              Gaze Visualizer Style
+            </AccordionTrigger>
             <AccordionContent className={sectionContentClassName}>
               <Label className={sectionLabelClassName} htmlFor="gaze-radius">
                 Radius

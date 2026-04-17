@@ -75,9 +75,9 @@ If the selected folder contains an `events.csv`, the timeline is initialized fro
 
 ### Scene Video
 
-Any in-headset Quest 3 video recording can be used as the scene recording. However, it has only been tested with the Square 1:1 resolution, only capturing one eye. 
+Any in-headset Quest 3 video recording can be used as the scene recording. However, it has only been tested with the Square 1:1 resolution, only capturing one eye.
 
-Meta Quest Developer Hub's recording feature has not been tested with the player, but it may be inaccurate due to the barrel distortion still present in MQDH recordings. 
+Meta Quest Developer Hub's recording feature has not been tested with the player, but it may be inaccurate due to the barrel distortion still present in MQDH recordings.
 
 ### Neon Export Folder
 
@@ -90,9 +90,9 @@ The selected folder should contain:
 
 - `config.json` required
 
-This file is used to build the gaze projector so azimuth/elevation samples can be mapped into video coordinates. The file contains the pose offset of the neon module from the Quest 3 headset. This is generatable from [Neon's MRTK3 Template project](https://docs.pupil-labs.com/neon/neon-xr/MRTK3-template-project/#quest-3), with the calibration scene. 
+This file is used to build the gaze projector so azimuth/elevation samples can be mapped into video coordinates. The file contains the pose offset of the neon module from the Quest 3 headset. This is generatable from [Neon's MRTK3 Template project](https://docs.pupil-labs.com/neon/neon-xr/MRTK3-template-project/#quest-3), with the calibration scene.
 
-Calibration is only necessary once for the official Neon XR Quest 3 headset mount, and once per session for the other neon modules (e.g., Pupil Neon ready-set-go model). 
+Calibration is only necessary once for the official Neon XR Quest 3 headset mount, and once per session for the other neon modules (e.g., Pupil Neon ready-set-go model).
 
 ## `gaze.csv` Format
 
@@ -102,7 +102,7 @@ The gaze parser expects header-based CSV data and requires these columns:
 - `azimuth [deg]`
 - `elevation [deg]`
 
-The gaze ray is calculated and reprojected into the XR scene video using these data. Do note that the gaze ray already assumes binocular vision, despite the monocular video recording of the XR scene. 
+The gaze ray is calculated and reprojected into the XR scene video using these data. Do note that the gaze ray already assumes binocular vision, despite the monocular video recording of the XR scene.
 
 It also reads these columns when available:
 

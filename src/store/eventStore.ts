@@ -1,13 +1,13 @@
 import { create } from 'zustand'
-import { Event } from '../types/annotations'
+import type { Event } from '../types/annotations'
 
 interface EventState {
   recordingId: string
-  events: Event[]
+  events: Array<Event>
   gazeStartTime: number
   eventOriginTimestampNs: number
   addEvent: (event: Event) => void
-  setEvents: (events: Event[]) => void
+  setEvents: (events: Array<Event>) => void
   renameEvent: (oldName: string, newName: string) => void
   removeEvent: (timestamp_ns: number) => void
   removeEvents: () => void
@@ -25,9 +25,7 @@ export const useEventStore = create<EventState>((set) => ({
     set((state) => {
       const { events } = state
 
-      for (let i = 0; i < events.length; i++) {
-        const currentEvent = events[i]
-
+      for (const currentEvent of events) {
         if (
           currentEvent.name === event.name &&
           currentEvent.timestamp_ns === event.timestamp_ns
@@ -38,7 +36,7 @@ export const useEventStore = create<EventState>((set) => ({
 
       return { events: [...events, event] }
     }),
-  setEvents: (events: Event[]) => set({ events }),
+  setEvents: (events: Array<Event>) => set({ events }),
   renameEvent: (oldName: string, newName: string) =>
     set((state) => ({
       events: state.events.map((event) =>

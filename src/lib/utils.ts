@@ -8,7 +8,7 @@ export function cn(...inputs: Array<ClassValue>) {
 }
 
 export function parseCsvLine(line: string) {
-  const cells: string[] = []
+  const cells: Array<string> = []
   let current = ''
   let inQuotes = false
 
@@ -49,7 +49,7 @@ function escapeCsvField(value: string | number) {
   return `"${normalizedValue.replace(/"/g, '""')}"`
 }
 
-export function serializeEventsCsv(eventItems: AnnotationEvent[]) {
+export function serializeEventsCsv(eventItems: Array<AnnotationEvent>) {
   const rows = [...eventItems]
     .sort((a, b) => a.utx_timestamp_ns - b.utx_timestamp_ns)
     .map((eventItem) =>
@@ -66,7 +66,7 @@ export function serializeEventsCsv(eventItems: AnnotationEvent[]) {
 
 export async function writeEventsCsv(
   directoryHandle: FileSystemDirectoryHandle,
-  eventItems: AnnotationEvent[],
+  eventItems: Array<AnnotationEvent>,
 ) {
   const handle = await directoryHandle.getFileHandle('events.csv', {
     create: true,

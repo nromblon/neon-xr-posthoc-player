@@ -11,6 +11,8 @@ import {
 } from 'lucide-react'
 import React from 'react'
 
+import { VideoEventsTimeline } from './video-events-timeline'
+import type { Event as AnnotationEvent } from '@/types/annotations'
 import { Button } from '@/components/ui/button'
 import {
   HoverCard,
@@ -18,8 +20,6 @@ import {
   HoverCardTrigger,
 } from '@/components/ui/hover-card'
 import { Slider } from '@/components/ui/slider'
-import type { Event as AnnotationEvent } from '@/types/annotations'
-import { VideoEventsTimeline } from './video-events-timeline'
 
 const EVENT_NAME_COLUMN_WIDTH_PX = 160
 
@@ -32,14 +32,14 @@ export interface VideoControlsProps {
   currentTime: number
   duration: number
   enabledLayers: Record<string, boolean>
-  events: AnnotationEvent[]
+  events: Array<AnnotationEvent>
   isFullscreen: boolean
   isMuted: boolean
   isPlaying: boolean
   isSavingEvents: boolean
-  layers: VideoControlLayer[]
+  layers: Array<VideoControlLayer>
   playbackRate: number
-  playbackRates: readonly number[]
+  playbackRates: ReadonlyArray<number>
   volume: number
   onSeek: (nextTime: number) => void
   onStepFrame: (direction: 1 | -1) => void

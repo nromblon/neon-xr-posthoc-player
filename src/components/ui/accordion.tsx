@@ -1,8 +1,8 @@
-import * as React from "react"
-import { ChevronDownIcon } from "lucide-react"
-import { Accordion as AccordionPrimitive } from "radix-ui"
+import * as React from 'react'
+import { ChevronDownIcon } from 'lucide-react'
+import { Accordion as AccordionPrimitive } from 'radix-ui'
 
-import { cn } from "@/lib/utils"
+import { cn } from '@/lib/utils'
 
 function Accordion({
   ...props
@@ -17,7 +17,7 @@ function AccordionItem({
   return (
     <AccordionPrimitive.Item
       data-slot="accordion-item"
-      className={cn("border-b px-4 last:border-b-0", className)}
+      className={cn('border-b px-4 last:border-b-0', className)}
       {...props}
     />
   )
@@ -33,8 +33,8 @@ function AccordionTrigger({
       <AccordionPrimitive.Trigger
         data-slot="accordion-trigger"
         className={cn(
-          "flex flex-1 items-center justify-between gap-4 py-4 text-left text-sm font-semibold transition-colors outline-none hover:text-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 [&[data-state=open]>svg]:rotate-180",
-          className
+          'flex flex-1 items-center justify-between gap-4 py-4 text-left text-sm font-semibold transition-colors outline-none hover:text-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 [&[data-state=open]>svg]:rotate-180',
+          className,
         )}
         {...props}
       >
@@ -56,7 +56,7 @@ function AccordionContent({
       className="overflow-hidden text-sm data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down"
       {...props}
     >
-      <div className={cn("pb-4", className)}>{children}</div>
+      <div className={cn('pb-4', className)}>{children}</div>
     </AccordionPrimitive.Content>
   )
 }

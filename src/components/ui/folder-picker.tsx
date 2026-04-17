@@ -9,7 +9,7 @@ type FolderInputProps = {
     files: FileList,
     folderName: string,
     directoryHandle?: FileSystemDirectoryHandle,
-    entries?: FolderPickEntry[],
+    entries?: Array<FolderPickEntry>,
   ) => void
   placeholder?: string
   buttonLabel?: string
@@ -26,8 +26,8 @@ export type FolderPickEntry = {
 async function collectDirectoryFiles(
   directoryHandle: FileSystemDirectoryHandle,
   pathPrefix = directoryHandle.name,
-): Promise<FolderPickEntry[]> {
-  const entries: FolderPickEntry[] = []
+): Promise<Array<FolderPickEntry>> {
+  const entries: Array<FolderPickEntry> = []
 
   for await (const entry of directoryHandle.values()) {
     const nextPath = `${pathPrefix}/${entry.name}`
@@ -84,9 +84,14 @@ export function FolderPicker({
       }
 
       setLabel(directoryHandle.name)
-      onPick?.(dataTransfer.files, directoryHandle.name, directoryHandle, entries)
+      onPick?.(
+        dataTransfer.files,
+        directoryHandle.name,
+        directoryHandle,
+        entries,
+      )
     } catch (error) {
-      if ((error as DOMException)?.name !== 'AbortError') {
+      if ((error as DOMException).name !== 'AbortError') {
         console.error('Failed to pick directory:', error)
       }
     }
@@ -99,14 +104,11 @@ export function FolderPicker({
       return
     }
 
-    const first = files[0] as File & { webkitRelativePath?: string }
-    const folderName =
-      first.webkitRelativePath?.split('/')[0] ?? 'Selected folder'
+    const first = files[0]
+    const folderName = first.webkitRelativePath.split('/')[0] || 'Selected folder'
     const entries = Array.from(files).map((file) => ({
       file,
-      relativePath:
-        (file as File & { webkitRelativePath?: string }).webkitRelativePath ??
-        `${folderName}/${file.name}`,
+      relativePath: file.webkitRelativePath || `${folderName}/${file.name}`,
     }))
 
     setLabel(folderName)
@@ -133,8 +135,8 @@ export function FolderPicker({
             {buttonLabel}
           </span>
         </InputGroupAddon>
-        <div className="flex flex-1 items-center px-1 text-sm font-normal text-muted-foreground">
-          <span className="truncate">{label}</span>
+        <div className="w-full flex-1 items-center px-1 truncate text-sm font-normal text-muted-foreground">
+          <span className="w-full truncate">{label}</span>
         </div>
       </InputGroup>
     </div>

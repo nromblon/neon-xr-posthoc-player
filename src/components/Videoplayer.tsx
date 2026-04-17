@@ -1,15 +1,16 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 
+import { VideoControls } from './video-player/video-controls'
+import type {
+  Projector} from '@/lib/gaze-projection';
 import { Button } from '@/components/ui/button'
 
 import {
-  Projector,
   buildProjector,
   debugProjector,
   projectGazeSample,
 } from '@/lib/gaze-projection'
 import { useEventStore } from '@/store/eventStore'
-import { VideoControls } from './video-player/video-controls'
 
 interface CircleConfig {
   stroke: number
@@ -217,7 +218,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         // const scaledX = point.gazeX * scaleX;
         // const scaledY = point.gazeY * scaleY;
         const projectedPoint = projectGazeSample(
-          gazeProjectorRef.current!,
+          gazeProjectorRef.current,
           point.azimuthDeg,
           point.elevationDeg,
         )
