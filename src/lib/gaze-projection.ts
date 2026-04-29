@@ -29,7 +29,6 @@ export interface NeonXRConfig {
   sensorCalibration: {
     offset: {
       rotation: MountRotation
-      /** Position in metres relative to Quest origin — not used for ray projection */
       position: { x: number; y: number; z: number }
     }
   }
@@ -45,30 +44,22 @@ export interface CameraIntrinsics {
 
 /** Parameters describing the Quest 3 video recording */
 export interface VideoParams {
-  /** Recording width in pixels */
   videoWidth: number
-  /** Recording height in pixels */
   videoHeight: number
-  /**
-   * Horizontal FOV of the recording in degrees.
-   *
-   * Typical values:
-   *   ~89°  → in-headset recording (1920×1080) or MQDH Cropped
-   *   ~120° → MQDH Cinematic
-   *
-   * Verify empirically: display a fixation cross at a known angle in VR,
-   * record it, measure its pixel x position, then solve:
-   *   fx = (pixel_x - cx) / Math.tan(toRad(knownAngleDeg))
-   */
   fovHorizontalDeg: number
+  gazeOffsetX?: number // pixels, default 0
+  gazeOffsetY?: number // pixels, default 0
 }
 
 /** A built projector — construct once, reuse for all samples in a recording */
 export interface Projector {
   mountQuat: quat
+  mountPosition: vec3
   K: CameraIntrinsics
   videoWidth: number
   videoHeight: number
+  gazeOffsetX: number
+  gazeOffsetY: number
 }
 
 /** Result of projecting a single gaze sample */
@@ -133,9 +124,16 @@ function azElToRayScene(azimuthDeg: number, elevationDeg: number): vec3 {
  * Only rotation is applied — translation is irrelevant for ray directions.
  */
 function rotateRayToQuestSpace(rayScene: vec3, mountQuat: quat): vec3 {
-  const out = vec3.create()
-  vec3.transformQuat(out, rayScene, mountQuat)
-  return out
+  // Neon scene camera: X-right, Y-down, Z-forward (right-handed)
+  // Unity (where the mount calibration is defined): X-right, Y-up, Z-forward (left-handed)
+  // The only axis difference is Y — negate it before applying the Unity rotation
+  const rayUnity = vec3.fromValues(rayScene[0], -rayScene[1], rayScene[2])
+
+  const rotated = vec3.create()
+  vec3.transformQuat(rotated, rayUnity, mountQuat)
+
+  // Convert result back from Unity Y-up to camera/image Y-down for projection
+  return vec3.fromValues(rotated[0], -rotated[1], rotated[2])
 }
 
 /**
@@ -147,7 +145,10 @@ function rotateRayToQuestSpace(rayScene: vec3, mountQuat: quat): vec3 {
  */
 function projectRayToFrame(
   rayQuest: vec3,
+  mountPosition: vec3,
   K: CameraIntrinsics,
+  gazeOffsetX: number,
+  gazeOffsetY: number,
 ): GazeProjectionResult {
   // Ray must be facing forward (positive Z) to land on screen
   if (rayQuest[2] <= 0) {
@@ -157,13 +158,19 @@ function projectRayToFrame(
     return { x: null, y: null, valid: false }
   }
 
-  // Perspective divide, then apply intrinsics
-  const xNorm = rayQuest[0] / rayQuest[2]
-  const yNorm = rayQuest[1] / rayQuest[2]
+  // The ray originates at the Neon module's physical position in Quest space,
+  // not at the Quest camera's optical centre. Find where the ray intersects
+  // the normalised image plane (Z=1) given this offset origin.
+  //
+  // Ray: P(t) = mountPosition + t * rayQuest
+  // Solve for t where P(t).z = 1:  t = (1 - mountPosition[2]) / rayQuest[2]
+  const t = (1.0 - mountPosition[2]) / rayQuest[2]
+  const xAtPlane = mountPosition[0] + t * rayQuest[0]
+  const yAtPlane = mountPosition[1] + t * rayQuest[1]
 
   return {
-    x: K.fx * xNorm + K.cx,
-    y: K.fy * yNorm + K.cy,
+    x: K.fx * xAtPlane + K.cx + gazeOffsetX,
+    y: K.fy * yAtPlane + K.cy + gazeOffsetY,
     valid: true,
   }
 }
@@ -187,21 +194,101 @@ export function buildProjector(
   const { videoWidth, videoHeight, fovHorizontalDeg } = videoParams
 
   const r = configJson.sensorCalibration.offset.rotation
-
   // config.json stores rotation as Euler angles in degrees (x=pitch, y=yaw, z=roll)
   // Unity's default Euler order is ZXY (applied as: roll first, then pitch, then yaw)
-  const mountQuat = quat.create()
-  quat.fromEuler(mountQuat, r.x, r.y, r.z)
-  // quat.fromEuler expects (out, x_deg, y_deg, z_deg) and uses ZXY order internally
+  // // quat.fromEuler expects (out, x_deg, y_deg, z_deg) and uses ZXY order internally
   // If ZXY (default Unity) doesn't look right, try:
   // quat.fromEuler(mountQuat, r.y, r.x, r.z); // swap pitch/yaw if off
+  const mountQuat = quat.create()
+  console.log('rebuilding projector')
+  quat.fromEuler(mountQuat, r.x, r.y, r.z) // standard order, no sign changes
+
+  // Extract position offset — stored in metres in config.json
+  const p = configJson.sensorCalibration.offset.position
+  const mountPosition = vec3.fromValues(p.x, -p.y, p.z)
 
   const fx = videoWidth / 2 / Math.tan(toRad(fovHorizontalDeg) / 2)
   const fy = fx
   const cx = videoWidth / 2
   const cy = videoHeight / 2
 
-  return { mountQuat, K: { fx, fy, cx, cy }, videoWidth, videoHeight }
+  return {
+    mountQuat,
+    mountPosition,
+    K: { fx, fy, cx, cy },
+    videoWidth,
+    videoHeight,
+    gazeOffsetX: videoParams.gazeOffsetX || 0,
+    gazeOffsetY: videoParams.gazeOffsetY || 0,
+  }
+}
+
+export function debugProjector(projector: Projector): void {
+  // Test ray pointing straight ahead (azimuth=0, elevation=0)
+  const rayStraight = azElToRayScene(0, 0)
+  const rotatedStraight = rotateRayToQuestSpace(
+    rayStraight,
+    projector.mountQuat,
+  )
+
+  // Test ray pointing 10° up (azimuth=0, elevation=10)
+  const rayUp = azElToRayScene(0, 10)
+  const rotatedUp = rotateRayToQuestSpace(rayUp, projector.mountQuat)
+
+  // Test ray pointing 10° right (azimuth=10, elevation=0)
+  const rayRight = azElToRayScene(10, 0)
+  const rotatedRight = rotateRayToQuestSpace(rayRight, projector.mountQuat)
+
+  console.table({
+    'straight ahead': {
+      scene: Array.from(rayStraight).map((v) => v.toFixed(4)),
+      quest: Array.from(rotatedStraight).map((v) => v.toFixed(4)),
+    },
+    '10° up': {
+      scene: Array.from(rayUp).map((v) => v.toFixed(4)),
+      quest: Array.from(rotatedUp).map((v) => v.toFixed(4)),
+    },
+    '10° right': {
+      scene: Array.from(rayRight).map((v) => v.toFixed(4)),
+      quest: Array.from(rotatedRight).map((v) => v.toFixed(4)),
+    },
+  })
+
+  console.log(
+    'mountQuat:',
+    Array.from(projector.mountQuat).map((v) => v.toFixed(6)),
+  )
+  console.log(
+    'mountPosition:',
+    Array.from(projector.mountPosition).map((v) => v.toFixed(4)),
+  )
+  console.log('K:', projector.K)
+
+  // Also project to pixels
+  const straight = projectGazeSample(projector, 0, 0)
+  const up10 = projectGazeSample(projector, 0, 10)
+  const down10 = projectGazeSample(projector, 0, -10)
+  const right10 = projectGazeSample(projector, 10, 0)
+
+  console.table({
+    'straight (az=0, el=0)': {
+      x: straight.x?.toFixed(1),
+      y: straight.y?.toFixed(1),
+    },
+    '10° up   (az=0, el=+10)': { x: up10.x?.toFixed(1), y: up10.y?.toFixed(1) },
+    '10° down (az=0, el=-10)': {
+      x: down10.x?.toFixed(1),
+      y: down10.y?.toFixed(1),
+    },
+    '10° right(az=10, el=0)': {
+      x: right10.x?.toFixed(1),
+      y: right10.y?.toFixed(1),
+    },
+  })
+
+  console.log(
+    `Video: ${projector.videoWidth}x${projector.videoHeight}, centre: (${projector.K.cx}, ${projector.K.cy})`,
+  )
 }
 
 /**
@@ -218,7 +305,13 @@ export function projectGazeSample(
 ): GazeProjectionResult {
   const rayScene = azElToRayScene(azimuthDeg, elevationDeg)
   const rayQuest = rotateRayToQuestSpace(rayScene, projector.mountQuat)
-  return projectRayToFrame(rayQuest, projector.K)
+  return projectRayToFrame(
+    rayQuest,
+    projector.mountPosition,
+    projector.K,
+    projector.gazeOffsetX,
+    projector.gazeOffsetY,
+  )
 }
 
 /**
@@ -233,8 +326,8 @@ export function projectGazeSample(
  */
 export function projectGazeCSV(
   projector: Projector,
-  rows: GazeCSVRow[],
-): ProjectedGazeSample[] {
+  rows: Array<GazeCSVRow>,
+): Array<ProjectedGazeSample> {
   return rows.map((row): ProjectedGazeSample => {
     const timestamp_ns = parseInt(String(row['timestamp [ns]']), 10)
     const az = parseFloat(String(row['azimuth [deg]']))

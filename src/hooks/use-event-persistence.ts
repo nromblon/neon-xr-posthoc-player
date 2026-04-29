@@ -1,8 +1,8 @@
 import * as React from 'react'
 
+import type { Event as AnnotationEvent } from '@/types/annotations'
 import { parseCsvLine, serializeEventsCsv, writeEventsCsv } from '@/lib/utils'
 import { useEventStore } from '@/store/eventStore'
-import type { Event as AnnotationEvent } from '@/types/annotations'
 
 const NANOSECONDS_PER_MILLISECOND = 1_000_000
 
@@ -11,6 +11,18 @@ function normalizeHeaderName(header: string) {
     .trim()
     .replace(/^['"`]+|['"`]+$/g, '')
     .toLowerCase()
+}
+
+function getPinnedEventSortRank(name: string) {
+  if (name === 'recording.begin') {
+    return 0
+  }
+
+  if (name === 'recording.end') {
+    return 1
+  }
+
+  return 2
 }
 
 interface UseEventPersistenceParams {
@@ -128,31 +140,38 @@ export function useEventPersistence({
             }
           })
           .filter((event): event is AnnotationEvent => event !== null)
-          .sort((a, b) => a.timestamp_ns - b.timestamp_ns)
+          .sort((a, b) => {
+            const rankDifference =
+              getPinnedEventSortRank(a.name) - getPinnedEventSortRank(b.name)
+
+            if (rankDifference !== 0) {
+              return rankDifference
+            }
+
+            return a.timestamp_ns - b.timestamp_ns
+          })
 
         setRecordingId(rawEvents[0]?.recording_id ?? '')
 
-        const originTimestamp =
-          rawEvents.find((event) => event.name === 'recording.begin')
-            ?.timestamp_ns ?? rawEvents[0]?.timestamp_ns
+        const recordingBeginEvent = rawEvents.find(
+          (event) => event.name === 'recording.begin',
+        )
+        const originTimestamp = recordingBeginEvent
+          ? recordingBeginEvent.timestamp_ns
+          : (rawEvents[0]?.timestamp_ns ?? 0)
         const gazeStartOffsetNs =
           gazeStartMsRef.current * NANOSECONDS_PER_MILLISECOND
 
         const normalizedEvents = rawEvents.map((event) => ({
           ...event,
-          timestamp_ns: Math.max(
-            event.timestamp_ns - (originTimestamp ?? 0) + gazeStartOffsetNs,
-            0,
-          ),
+          timestamp_ns: Math.max(event.timestamp_ns - originTimestamp + gazeStartOffsetNs, 0),
         }))
 
-        if (!cancelled) {
-          skipNextSaveRef.current = true
-          previousTimelineGazeStartMsRef.current = gazeStartMsRef.current
-          persistedEventsCsvRef.current = serializeEventsCsv(rawEvents)
-          setEventOriginTimestampNs(originTimestamp ?? 0)
-          setEvents(normalizedEvents)
-        }
+        skipNextSaveRef.current = true
+        previousTimelineGazeStartMsRef.current = gazeStartMsRef.current
+        persistedEventsCsvRef.current = serializeEventsCsv(rawEvents)
+        setEventOriginTimestampNs(originTimestamp)
+        setEvents(normalizedEvents)
       } catch (error) {
         if (!cancelled) {
           const nextError =

@@ -9,11 +9,41 @@ type FolderInputProps = {
     files: FileList,
     folderName: string,
     directoryHandle?: FileSystemDirectoryHandle,
+    entries?: Array<FolderPickEntry>,
   ) => void
   placeholder?: string
   buttonLabel?: string
   className?: string
   inputRef?: React.RefObject<HTMLInputElement | null>
+  selectedLabel?: string
+}
+
+export type FolderPickEntry = {
+  file: File
+  relativePath: string
+}
+
+async function collectDirectoryFiles(
+  directoryHandle: FileSystemDirectoryHandle,
+  pathPrefix = directoryHandle.name,
+): Promise<Array<FolderPickEntry>> {
+  const entries: Array<FolderPickEntry> = []
+
+  for await (const entry of directoryHandle.values()) {
+    const nextPath = `${pathPrefix}/${entry.name}`
+
+    if (entry.kind === 'file') {
+      entries.push({
+        file: await entry.getFile(),
+        relativePath: nextPath,
+      })
+      continue
+    }
+
+    entries.push(...(await collectDirectoryFiles(entry, nextPath)))
+  }
+
+  return entries
 }
 
 export function FolderPicker({
@@ -22,11 +52,16 @@ export function FolderPicker({
   buttonLabel = 'Choose Folder',
   className,
   inputRef,
+  selectedLabel,
 }: FolderInputProps) {
   if (inputRef === undefined) {
     inputRef = React.useRef<HTMLInputElement>(null)
   }
   const [label, setLabel] = React.useState(placeholder)
+
+  React.useEffect(() => {
+    setLabel(selectedLabel?.trim() ? selectedLabel : placeholder)
+  }, [placeholder, selectedLabel])
 
   const pickWithDirectoryHandle = async () => {
     if (typeof window === 'undefined' || !('showDirectoryPicker' in window)) {
@@ -36,30 +71,27 @@ export function FolderPicker({
 
     try {
       const directoryHandle = await window.showDirectoryPicker()
-      const files: File[] = []
+      const entries = await collectDirectoryFiles(directoryHandle)
 
-      for await (const entry of directoryHandle.values()) {
-        if (entry.kind !== 'file') {
-          continue
-        }
-
-        files.push(await entry.getFile())
-      }
-
-      if (files.length === 0) {
+      if (entries.length === 0) {
         setLabel(placeholder)
         return
       }
 
       const dataTransfer = new DataTransfer()
-      for (const file of files) {
-        dataTransfer.items.add(file)
+      for (const entry of entries) {
+        dataTransfer.items.add(entry.file)
       }
 
       setLabel(directoryHandle.name)
-      onPick?.(dataTransfer.files, directoryHandle.name, directoryHandle)
+      onPick?.(
+        dataTransfer.files,
+        directoryHandle.name,
+        directoryHandle,
+        entries,
+      )
     } catch (error) {
-      if ((error as DOMException)?.name !== 'AbortError') {
+      if ((error as DOMException).name !== 'AbortError') {
         console.error('Failed to pick directory:', error)
       }
     }
@@ -72,12 +104,15 @@ export function FolderPicker({
       return
     }
 
-    const first = files[0] as File & { webkitRelativePath?: string }
-    const folderName =
-      first.webkitRelativePath?.split('/')[0] ?? 'Selected folder'
+    const first = files[0]
+    const folderName = first.webkitRelativePath.split('/')[0] || 'Selected folder'
+    const entries = Array.from(files).map((file) => ({
+      file,
+      relativePath: file.webkitRelativePath || `${folderName}/${file.name}`,
+    }))
 
     setLabel(folderName)
-    onPick?.(files, folderName)
+    onPick?.(files, folderName, undefined, entries)
   }
 
   return (
@@ -100,8 +135,8 @@ export function FolderPicker({
             {buttonLabel}
           </span>
         </InputGroupAddon>
-        <div className="flex flex-1 items-center px-1 text-sm font-normal text-muted-foreground">
-          <span className="truncate">{label}</span>
+        <div className="w-full flex-1 items-center px-1 truncate text-sm font-normal text-muted-foreground">
+          <span className="w-full truncate">{label}</span>
         </div>
       </InputGroup>
     </div>

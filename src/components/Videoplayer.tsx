@@ -1,14 +1,16 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 
+import { VideoControls } from './video-player/video-controls'
+import type { SensorOffsetValues } from '@/lib/config-file'
+import type { Projector } from '@/lib/gaze-projection'
 import { Button } from '@/components/ui/button'
-
+import { applySensorOffsetsToConfig } from '@/lib/config-file'
 import {
-  Projector,
   buildProjector,
+  debugProjector,
   projectGazeSample,
 } from '@/lib/gaze-projection'
 import { useEventStore } from '@/store/eventStore'
-import { VideoControls } from './video-player/video-controls'
 
 interface CircleConfig {
   stroke: number
@@ -22,6 +24,7 @@ interface VideoPlayerProps {
   videoFile: File
   xrConfigFile: File
   fovHorizontalDeg: number
+  sensorOffsets: SensorOffsetValues
   circleConfig: CircleConfig
   isSavingEvents: boolean
   onFrameDurationChange?: (frameDurationSeconds: number) => void
@@ -90,6 +93,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   videoFile,
   xrConfigFile,
   fovHorizontalDeg,
+  sensorOffsets,
   circleConfig = defaultCircleConfig,
   isSavingEvents,
   onFrameDurationChange,
@@ -216,7 +220,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         // const scaledX = point.gazeX * scaleX;
         // const scaledY = point.gazeY * scaleY;
         const projectedPoint = projectGazeSample(
-          gazeProjectorRef.current!,
+          gazeProjectorRef.current,
           point.azimuthDeg,
           point.elevationDeg,
         )
@@ -233,17 +237,18 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         }
 
         // Drawing the Gaze circle around the point
+        const nextCircleConfig = circleConfigRef.current
         context.clearRect(0, 0, canvas.width, canvas.height)
         context.beginPath()
         context.arc(
           projectedPoint.x,
           projectedPoint.y,
-          circleConfig.radius,
+          nextCircleConfig.radius,
           0,
           2 * Math.PI,
         )
-        context.strokeStyle = circleConfig.color
-        context.lineWidth = circleConfig.stroke
+        context.strokeStyle = nextCircleConfig.color
+        context.lineWidth = nextCircleConfig.stroke
         context.stroke()
       },
     })
@@ -388,12 +393,17 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
             return
           }
 
-          const config = JSON.parse(text)
+          const config = applySensorOffsetsToConfig(
+            JSON.parse(text),
+            sensorOffsets,
+          )
           const projector = buildProjector(config, {
             videoWidth,
             videoHeight,
             fovHorizontalDeg,
           })
+
+          debugProjector(projector)
 
           gazeProjectorRef.current = projector
           setNeedsManualVideoDimensions(false)
@@ -431,6 +441,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   }, [
     fovHorizontalDeg,
     manualVideoDimensions,
+    sensorOffsets,
     videoFile,
     videoRef,
     xrConfigFile,
