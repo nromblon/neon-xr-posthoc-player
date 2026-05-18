@@ -6,6 +6,7 @@ import { BookXIcon, HistoryIcon, SaveIcon, SkipBackIcon, SkipForwardIcon } from 
 import { toast } from 'sonner'
 import type { FolderPickEntry } from '@/components/ui/folder-picker'
 import type {AdjustmentsConfigFile} from '@/lib/config-file';
+import type { VideoExportState } from '@/lib/video-export'
 import { FolderPicker } from '@/components/ui/folder-picker'
 import { Input } from '@/components/ui/input'
 import {
@@ -36,6 +37,10 @@ import {
   saveAdjustmentsConfigFile,
   saveModifiedConfigFile
 } from '@/lib/config-file'
+import {
+  INITIAL_VIDEO_EXPORT_STATE,
+  createVideoExportState,
+} from '@/lib/video-export'
 import { useEventStore } from '@/store/eventStore'
 import {
   Accordion,
@@ -86,6 +91,7 @@ function App() {
     React.useState<FileSystemDirectoryHandle | null>(null)
   const [recordingDirectoryHandle, setRecordingDirectoryHandle] =
     React.useState<FileSystemDirectoryHandle | null>(null)
+  const [recordingFolderLabel, setRecordingFolderLabel] = React.useState('')
   const [selectedGazeFolderLabel, setSelectedGazeFolderLabel] =
     React.useState('')
   // Scene Video Data
@@ -94,6 +100,17 @@ function App() {
   const [configFile, setConfigFile] = React.useState<File | null>(null)
   // Horizontal FOV for projection calculations
   const [fovHorizontalDeg, setFovHorizontalDeg] = React.useState(82)
+  const [exportGazeVideo, setExportGazeVideo] = React.useState<
+    (() => Promise<void>) | null
+  >(null)
+  const [videoExportState, setVideoExportState] =
+    React.useState<VideoExportState>(INITIAL_VIDEO_EXPORT_STATE)
+  const handleExportReady = React.useCallback(
+    (exportHandler: (() => Promise<void>) | null) => {
+      setExportGazeVideo(() => exportHandler)
+    },
+    [],
+  )
 
   const videoRef = useRef<HTMLVideoElement>(null)
   const gazeStartMs = useEventStore((state) => state.gazeStartTime)
@@ -281,6 +298,8 @@ function App() {
     const dataFolderFiles = normalizedEntries
       .filter((entry) => entry.relativePath.split('/')[1] === dataFolderName)
       .map((entry) => entry.file)
+
+    setRecordingFolderLabel(folderName)
 
     const dataTransfer = new DataTransfer()
     for (const file of dataFolderFiles) {
@@ -572,6 +591,31 @@ function App() {
 
   const sectionLabelClassName = 'text-sm font-medium'
   const sectionContentClassName = 'flex flex-col gap-2'
+  const isExportBusy =
+    videoExportState.status === 'preparing' ||
+    videoExportState.status === 'exporting' ||
+    videoExportState.status === 'saving'
+  const canExportVideo =
+    Boolean(videoFile && gazeFile && configFile && exportGazeVideo) &&
+    !isExportBusy
+  const exportButtonLabel =
+    videoExportState.status === 'preparing'
+      ? 'Preparing Export...'
+      : videoExportState.status === 'exporting'
+        ? `Exporting ${videoExportState.progress}%`
+        : videoExportState.status === 'saving'
+          ? 'Saving MP4...'
+          : 'Export Gaze Video'
+  const exportStatusMessage =
+    videoExportState.status === 'success'
+      ? 'Export completed and the MP4 file was saved.'
+      : videoExportState.status === 'error'
+        ? videoExportState.errorMessage
+        : videoExportState.statusMessage
+          ? videoExportState.statusMessage
+        : !videoFile || !gazeFile || !configFile
+          ? 'Load a scene video, gaze data, and config file to enable export.'
+          : 'The export uses the current gaze timing, offsets, projector settings, and gaze style.'
 
   React.useEffect(() => {
     const updateOffsetInputValues = async () => {
@@ -591,6 +635,24 @@ function App() {
     void updateOffsetInputValues()
   }, [configFile, setSensorOffsets])
 
+  React.useEffect(() => {
+    if (!videoFile || !gazeFile || !configFile) {
+      setVideoExportState(createVideoExportState('idle'))
+      setExportGazeVideo(null)
+    }
+  }, [configFile, gazeFile, videoFile])
+
+  React.useEffect(() => {
+    if (
+      exportGazeVideo &&
+      videoExportState.status === 'error' &&
+      videoExportState.errorMessage ===
+        'Load the scene video metadata before exporting.'
+    ) {
+      setVideoExportState(createVideoExportState('idle'))
+    }
+  }, [exportGazeVideo, videoExportState.errorMessage, videoExportState.status])
+
   return (
     <div className="flex justify-between items-start my-4">
       <div
@@ -601,6 +663,7 @@ function App() {
           <VideoPlayer
             videoRef={videoRef}
             gazeDataFile={gazeFile}
+            recordingLabel={recordingFolderLabel}
             videoFile={videoFile}
             xrConfigFile={configFile}
             fovHorizontalDeg={fovHorizontalDeg}
@@ -613,6 +676,8 @@ function App() {
                 setFrameDurationMs(frameDurationSeconds * 1000)
               }
             }}
+            onExportReady={handleExportReady}
+            onExportStateChange={setVideoExportState}
           />
         ) : (
           <Empty>
@@ -985,6 +1050,34 @@ function App() {
                 />
                 </div>
 
+            </AccordionContent>
+          </AccordionItem>
+          <AccordionItem value="export-gaze-video">
+            <AccordionTrigger className="text-lg font-semibold">
+              Export Gaze Video
+            </AccordionTrigger>
+            <AccordionContent className={sectionContentClassName}>
+              <p className="text-sm text-muted-foreground">
+                Export the current scene video with the gaze overlay burned into
+                an MP4 file.
+              </p>
+              <Button
+                disabled={!canExportVideo}
+                onClick={() => {
+                  void exportGazeVideo?.()
+                }}
+              >
+                {exportButtonLabel}
+              </Button>
+              <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                <div
+                  className="h-full bg-primary transition-[width]"
+                  style={{ width: `${videoExportState.progress}%` }}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {exportStatusMessage}
+              </p>
             </AccordionContent>
           </AccordionItem>
           <AccordionItem value="visualizer-style">
