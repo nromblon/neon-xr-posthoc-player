@@ -13,6 +13,32 @@ export interface SensorOffsetValues {
   }
 }
 
+export interface AdjustmentsConfigFile {
+  gazeStartTimeMs: number
+  gazeOffset2d: {
+    x: number
+    y: number
+  }
+  gazeVisualizerStyle: {
+    radius: number
+    stroke: number
+    color: string
+  }
+}
+
+interface AdjustmentsConfigFileInput {
+  gazeStartTimeMs?: unknown
+  gazeOffset2d?: {
+    x?: unknown
+    y?: unknown
+  }
+  gazeVisualizerStyle?: {
+    radius?: unknown
+    stroke?: unknown
+    color?: unknown
+  }
+}
+
 interface NeonXRConfigFile {
   sensorCalibration?: {
     offset?: {
@@ -157,4 +183,103 @@ export async function saveModifiedConfigFile(
   URL.revokeObjectURL(objectUrl)
 
   return modifiedConfigFile
+}
+
+export function buildAdjustmentsConfigText(
+  adjustments: AdjustmentsConfigFile,
+) {
+  return JSON.stringify(adjustments, null, 4)
+}
+
+export async function saveAdjustmentsConfigFile(
+  adjustments: AdjustmentsConfigFile,
+  directoryHandle?: FileSystemDirectoryHandle | null,
+) {
+  const serializedConfig = buildAdjustmentsConfigText(adjustments)
+  const adjustmentsConfigFile = new File(
+    [serializedConfig],
+    'adjustments-config.json',
+    {
+      type: 'application/json',
+    },
+  )
+
+  if (directoryHandle) {
+    const fileHandle = await directoryHandle.getFileHandle(
+      'adjustments-config.json',
+      { create: true },
+    )
+    const writable = await fileHandle.createWritable()
+    await writable.write(serializedConfig)
+    await writable.close()
+    return adjustmentsConfigFile
+  }
+
+  if (
+    typeof window !== 'undefined' &&
+    'showSaveFilePicker' in window &&
+    typeof window.showSaveFilePicker === 'function'
+  ) {
+    const saveFilePicker = window.showSaveFilePicker.bind(window)
+    const fileHandle = await saveFilePicker({
+      suggestedName: 'adjustments-config.json',
+      types: [
+        {
+          description: 'JSON Files',
+          accept: { 'application/json': ['.json'] },
+        },
+      ],
+    })
+    const writable = await fileHandle.createWritable()
+    await writable.write(serializedConfig)
+    await writable.close()
+    return adjustmentsConfigFile
+  }
+
+  const blob = new Blob([serializedConfig], { type: 'application/json' })
+  const objectUrl = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = objectUrl
+  link.download = 'adjustments-config.json'
+  link.click()
+  URL.revokeObjectURL(objectUrl)
+
+  return adjustmentsConfigFile
+}
+
+function normalizeFiniteNumber(value: unknown, fallback: number) {
+  return typeof value === 'number' && Number.isFinite(value) ? value : fallback
+}
+
+function normalizeColor(value: unknown, fallback: string) {
+  return typeof value === 'string' && value.trim().length > 0 ? value : fallback
+}
+
+export async function readAdjustmentsConfig(
+  file: File,
+): Promise<AdjustmentsConfigFile> {
+  const text = await file.text()
+  const config = JSON.parse(text) as AdjustmentsConfigFileInput
+
+  return {
+    gazeStartTimeMs: Math.max(
+      0,
+      Math.round(normalizeFiniteNumber(config.gazeStartTimeMs, 0)),
+    ),
+    gazeOffset2d: {
+      x: normalizeFiniteNumber(config.gazeOffset2d?.x, 0),
+      y: normalizeFiniteNumber(config.gazeOffset2d?.y, 0),
+    },
+    gazeVisualizerStyle: {
+      radius: Math.max(
+        1,
+        Math.round(normalizeFiniteNumber(config.gazeVisualizerStyle?.radius, 14)),
+      ),
+      stroke: Math.max(
+        1,
+        Math.round(normalizeFiniteNumber(config.gazeVisualizerStyle?.stroke, 5)),
+      ),
+      color: normalizeColor(config.gazeVisualizerStyle?.color, '#FF0000'),
+    },
+  }
 }

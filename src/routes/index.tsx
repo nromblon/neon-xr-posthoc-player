@@ -2,9 +2,10 @@ import { Label } from '@radix-ui/react-label'
 import { createFileRoute } from '@tanstack/react-router'
 import React, { useRef } from 'react'
 import Color from 'color'
-import { BookXIcon, SaveIcon, SkipBackIcon, SkipForwardIcon } from 'lucide-react'
+import { BookXIcon, HistoryIcon, SaveIcon, SkipBackIcon, SkipForwardIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import type { FolderPickEntry } from '@/components/ui/folder-picker'
+import type {AdjustmentsConfigFile} from '@/lib/config-file';
 import { FolderPicker } from '@/components/ui/folder-picker'
 import { Input } from '@/components/ui/input'
 import {
@@ -28,9 +29,12 @@ import {
 import { Button } from '@/components/ui/button'
 import { useEventPersistence } from '@/hooks/use-event-persistence'
 import {
+  
   formatTruncatedDecimals,
+  readAdjustmentsConfig,
   readConfigOffsets,
-  saveModifiedConfigFile,
+  saveAdjustmentsConfigFile,
+  saveModifiedConfigFile
 } from '@/lib/config-file'
 import { useEventStore } from '@/store/eventStore'
 import {
@@ -39,7 +43,6 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion'
-import { InputGroupInput } from '@/components/ui/input-group'
 
 export const Route = createFileRoute('/')({ component: App })
 
@@ -57,6 +60,9 @@ function App() {
   const [radius, setRadius] = React.useState(14)
   const [stroke, setStroke] = React.useState(5)
   const [color, setColor] = React.useState('#FF0000')
+  const [gazeOffset2d, setGazeOffset2d] = React.useState({ x: 0, y: 0 })
+  const [adjustmentsConfigFile, setAdjustmentsConfigFile] =
+    React.useState<File | null>(null)
 
   const folderPickerRef = useRef<HTMLInputElement | null>(null)
   const [folderPickerKey, setFolderPickerKey] = React.useState(0)
@@ -64,6 +70,7 @@ function App() {
   const [packagePickerKey, setPackagePickerKey] = React.useState(0)
   const videoInputRef = useRef<HTMLInputElement | null>(null)
   const configInputRef = useRef<HTMLInputElement | null>(null)
+  const adjustmentsInputRef = useRef<HTMLInputElement | null>(null)
   const xTranslateOffsetRef = useRef<HTMLInputElement | null>(null)
   const yTranslateOffsetRef = useRef<HTMLInputElement | null>(null)
   const zTranslateOffsetRef = useRef<HTMLInputElement | null>(null)
@@ -109,6 +116,9 @@ function App() {
   const [frameDurationMs, setFrameDurationMs] = React.useState<number>(
     DEFAULT_FRAME_DURATION_MS,
   )
+  const gazeStartMinutes = Math.floor(gazeStartMs / 60000)
+  const gazeStartSeconds = Math.floor((gazeStartMs % 60000) / 1000)
+  const gazeStartMilliseconds = gazeStartMs % 1000
 
   const findGazeFile = (file: FileList) => {
     for (let i = 0; i < file.length; i++) {
@@ -138,6 +148,14 @@ function App() {
     entries.find((entry) => {
       const segments = entry.relativePath.split('/')
       return segments.length === 2 && entry.file.name === 'config.json'
+    })
+
+  const findAdjustmentsEntry = (entries: Array<FolderPickEntry>) =>
+    entries.find((entry) => {
+      const segments = entry.relativePath.split('/')
+      return (
+        segments.length === 2 && entry.file.name === 'adjustments-config.json'
+      )
     })
 
   const findSceneVideoEntry = (entries: Array<FolderPickEntry>) =>
@@ -187,6 +205,16 @@ function App() {
     input.files = dataTransfer.files
   }
 
+  const setAdjustmentsInputElement = React.useCallback(
+    (input: HTMLInputElement | null) => {
+      adjustmentsInputRef.current = input
+      if (input && adjustmentsConfigFile) {
+        setInputFiles(input, [adjustmentsConfigFile])
+      }
+    },
+    [adjustmentsConfigFile],
+  )
+
   const resetDataFolderPicker = () => {
     setFolderPickerKey((k) => k + 1)
     setSelectedGazeFolderLabel('')
@@ -234,6 +262,7 @@ function App() {
 
     const sceneEntry = findSceneVideoEntry(normalizedEntries)
     const configEntry = findConfigEntry(normalizedEntries)
+    const adjustmentsEntry = findAdjustmentsEntry(normalizedEntries)
     const dataFolderName = findDataFolderName(normalizedEntries)
 
     setRecordingDirectoryHandle(directoryHandle ?? null)
@@ -277,6 +306,23 @@ function App() {
     setInputFiles(folderPickerRef.current, dataFolderFiles)
     setSelectedGazeFolderLabel(dataFolderName)
 
+    if (adjustmentsEntry) {
+      setAdjustmentsConfigFile(adjustmentsEntry.file)
+      setInputFiles(adjustmentsInputRef.current, [adjustmentsEntry.file])
+      try {
+        const adjustments = await readAdjustmentsConfig(adjustmentsEntry.file)
+        applyAdjustmentsConfig(adjustments)
+        toast.success('Adjustments Loaded', {
+          description: 'Loaded adjustments-config.json from the recording folder.',
+        })
+      } catch (error) {
+        console.error('Failed to parse adjustments-config.json:', error)
+        toast.error('Adjustments Load Failed', {
+          description: 'Unable to parse adjustments-config.json from the recording folder.',
+        })
+      }
+    }
+
     if (directoryHandle) {
       try {
         const dataDirectoryHandle =
@@ -290,24 +336,8 @@ function App() {
     }
   }
 
-  const updateGazeStartInputs = (totalMs: number) => {
-    const boundedTotalMs = Math.max(0, Math.round(totalMs))
-    const minutes = Math.floor(boundedTotalMs / 60000)
-    const seconds = Math.floor((boundedTotalMs % 60000) / 1000)
-    const milliseconds = boundedTotalMs % 1000
-
-    const minInput = document.getElementById('m-gst') as HTMLInputElement | null
-    const secInput = document.getElementById('s-gst') as HTMLInputElement | null
-    const msInput = document.getElementById('ms-gst') as HTMLInputElement | null
-
-    if (minInput) minInput.value = minutes.toString()
-    if (secInput) secInput.value = seconds.toString().padStart(2, '0')
-    if (msInput) msInput.value = milliseconds.toString().padStart(3, '0')
-  }
-
   const setGazeStartTime = (nextGazeStartMs: number) => {
     const boundedGazeStartMs = Math.max(0, Math.round(nextGazeStartMs))
-    updateGazeStartInputs(boundedGazeStartMs)
     setGazeStartTimeInStore(boundedGazeStartMs)
   }
 
@@ -438,6 +468,108 @@ function App() {
     }
   }
 
+  const handleConfigReset = async () => {
+    if (!configFile) {
+      return
+    }
+    try {
+      const offsets = await readConfigOffsets(configFile)
+      setSensorOffsets(offsets)
+      toast.success('Config Reset', {
+        description: 'Reset offsets to values from config.json.',
+      })
+    } catch (error) {
+      console.error('Failed to parse config.json offsets:', error)
+      toast.error('Config Reset Failed', {
+        description: 'Unable to parse config.json to reset offsets.',
+      })
+    }
+  }
+
+  const handleGazeOffset2dChange = (axis: 'x' | 'y') =>
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const { value } = e.currentTarget
+
+      if (value === '' || value === '-' || value.endsWith('.')) {
+        return
+      }
+
+      const numericValue = Number(value)
+      if (!Number.isFinite(numericValue)) {
+        return
+      }
+
+      const nextValue = parseFloat(formatTruncatedDecimals(numericValue, 2))
+      setGazeOffset2d((current) => ({
+        ...current,
+        [axis]: nextValue,
+      }))
+    }
+
+  const handleGazeOffset2dBlur = (axis: 'x' | 'y') =>
+    (e: React.FocusEvent<HTMLInputElement>) => {
+      e.currentTarget.value = formatTruncatedDecimals(gazeOffset2d[axis], 2)
+    }
+
+  const applyAdjustmentsConfig = (adjustments: AdjustmentsConfigFile) => {
+    setGazeStartTime(adjustments.gazeStartTimeMs)
+    setGazeOffset2d({
+      x: adjustments.gazeOffset2d.x,
+      y: adjustments.gazeOffset2d.y,
+    })
+    setRadius(adjustments.gazeVisualizerStyle.radius)
+    setStroke(adjustments.gazeVisualizerStyle.stroke)
+    setColor(adjustments.gazeVisualizerStyle.color)
+  }
+
+  const handleAdjustmentsUpload = async (file: File) => {
+    try {
+      const adjustments = await readAdjustmentsConfig(file)
+      applyAdjustmentsConfig(adjustments)
+      setAdjustmentsConfigFile(file)
+      setInputFiles(adjustmentsInputRef.current, [file])
+      toast.success('Adjustments Loaded', {
+        description: 'Loaded adjustments-config.json.',
+      })
+    } catch (error) {
+      console.error('Failed to parse adjustments-config.json:', error)
+      toast.error('Adjustments Load Failed', {
+        description: 'Unable to parse adjustments-config.json.',
+      })
+      if (adjustmentsInputRef.current) {
+        adjustmentsInputRef.current.value = ''
+      }
+      setAdjustmentsConfigFile(null)
+    }
+  }
+
+  const handleAdjustmentsSave = async () => {
+    const adjustmentsConfig = {
+      gazeStartTimeMs: gazeStartMs,
+      gazeOffset2d,
+      gazeVisualizerStyle: {
+        radius,
+        stroke,
+        color,
+      },
+    }
+
+    try {
+      await saveAdjustmentsConfigFile(
+        adjustmentsConfig,
+        recordingDirectoryHandle,
+      )
+      toast.success('Adjustments Saved', {
+        description: 'Saved the adjustments to adjustments-config.json.',
+      })
+    } catch (error) {
+      console.error('Failed to save adjustments-config.json:', error)
+      toast.error('Save Failed', {
+        description: 'Unable to save adjustments-config.json.',
+      })
+    }
+  }
+
   const sectionLabelClassName = 'text-sm font-medium'
   const sectionContentClassName = 'flex flex-col gap-2'
 
@@ -451,42 +583,6 @@ function App() {
         const offsets = await readConfigOffsets(configFile)
         setSensorOffsets(offsets)
 
-        if (xTranslateOffsetRef.current) {
-          xTranslateOffsetRef.current.value = formatTruncatedDecimals(
-            offsets.translationMm.x,
-            2,
-          )
-        }
-        if (yTranslateOffsetRef.current) {
-          yTranslateOffsetRef.current.value = formatTruncatedDecimals(
-            offsets.translationMm.y,
-            2,
-          )
-        }
-        if (zTranslateOffsetRef.current) {
-          zTranslateOffsetRef.current.value = formatTruncatedDecimals(
-            offsets.translationMm.z,
-            2,
-          )
-        }
-        if (xRotationOffsetRef.current) {
-          xRotationOffsetRef.current.value = formatTruncatedDecimals(
-            offsets.rotationDeg.x,
-            2,
-          )
-        }
-        if (yRotationOffsetRef.current) {
-          yRotationOffsetRef.current.value = formatTruncatedDecimals(
-            offsets.rotationDeg.y,
-            2,
-          )
-        }
-        if (zRotationOffsetRef.current) {
-          zRotationOffsetRef.current.value = formatTruncatedDecimals(
-            offsets.rotationDeg.z,
-            2,
-          )
-        }
       } catch (error) {
         console.error('Failed to parse config.json offsets:', error)
       }
@@ -509,6 +605,7 @@ function App() {
             xrConfigFile={configFile}
             fovHorizontalDeg={fovHorizontalDeg}
             sensorOffsets={sensorOffsets}
+            gazeOffset2d={gazeOffset2d}
             circleConfig={{ stroke, radius, color }}
             isSavingEvents={isSavingEvents}
             onFrameDurationChange={(frameDurationSeconds) => {
@@ -590,43 +687,57 @@ function App() {
                   selectedLabel={selectedGazeFolderLabel}
                   onPick={handleGazeFolderPick}
                 />
-                <Label className={'text-xs'} htmlFor="calibration-file-upload">
-                  Neon XR Calibration File (config.json)
-                </Label>
-                <Input
-                  ref={configInputRef}
-                  id="calibration-file-upload"
-                  type="file"
-                  className="text-muted-foreground"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0]
-                    if (file) {
-                      setConfigFile(file)
-                    }
-                  }}
-                />
               </div>
               <div className='flex w-full items-center justify-between'>
                 <Label className={sectionLabelClassName} htmlFor="recording-fov">
                   Projector Settings
                 </Label>
-                <Button
-                  id='config-save'
-                  variant={'outline'}
-                  size={'icon'}
-                  title='Save to config_modified.json'
-                  disabled={!configFile}
-                  onClick={() => {
-                    void handleConfigSave()
-                  }}
-                >
-                  <SaveIcon className="h-2 w-2" />
-                </Button>
+                <div className='flex space-x-2'>
+                  <Button
+                    id='config-reset'
+                    variant={'outline'}
+                    size={'icon'}
+                    title='Reset to previous config.json values'
+                    disabled={!configFile}
+                    onClick={() => {
+                      void handleConfigReset()
+                    }}
+                  >
+                    <HistoryIcon className="h-2 w-2" />
+                  </Button>
+                  <Button
+                    id='config-save'
+                    variant={'outline'}
+                    size={'icon'}
+                    title='Save to config_modified.json'
+                    disabled={!configFile}
+                    onClick={() => {
+                      void handleConfigSave()
+                    }}
+                  >
+                    <SaveIcon className="h-2 w-2" />
+                  </Button>
+                </div>
               </div>
               <div
                 id="projector-settings"
                 className="flex flex-col gap-2 p-4 border-2 border-accent rounded-md"
               >
+                  <Label className={'text-xs'} htmlFor="calibration-file-upload">
+                    Neon XR Calibration File (config.json)
+                  </Label>
+                  <Input
+                    ref={configInputRef}
+                    id="calibration-file-upload"
+                    type="file"
+                    className="text-muted-foreground"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      if (file) {
+                        setConfigFile(file)
+                      }
+                    }}
+                  />
                   <Label className='text-sm' htmlFor="recording-fov">
                     Horizontal FOV
                   </Label>
@@ -653,8 +764,10 @@ function App() {
                       ref={xTranslateOffsetRef}
                       id="x-translate-offset"
                       type="number"
-                      min={0}
-                      step='0.01'
+                      value={sensorOffsets.translationMm.x}
+                      step='0.1'
+                      min={-50}
+                      max={50}
                       className="h-8 w-18 text-xs p-1.5"
                       onChange={handleOffsetInputChange}
                       onBlur={handleOffsetInputBlur}
@@ -664,8 +777,10 @@ function App() {
                       ref={yTranslateOffsetRef}
                       id="y-translate-offset"
                       type="number"
-                      min={0}
-                      step='0.01'
+                      value={sensorOffsets.translationMm.y}
+                      step='0.1'
+                      min={-50}
+                      max={50}
                       className="h-8 w-18 text-xs p-1.5"
                       onChange={handleOffsetInputChange}
                       onBlur={handleOffsetInputBlur}
@@ -675,8 +790,10 @@ function App() {
                       ref={zTranslateOffsetRef}
                       id="z-translate-offset"
                       type="number"
-                      min={0}
-                      step='0.01'
+                      value={sensorOffsets.translationMm.z}
+                      step='0.1'
+                      min={-50}
+                      max={50}
                       className="h-8 w-18 text-xs p-1.5"
                       onChange={handleOffsetInputChange}
                       onBlur={handleOffsetInputBlur}
@@ -694,6 +811,7 @@ function App() {
                       ref={xRotationOffsetRef}
                       id="x-rotation-offset"
                       type="number"
+                      value={sensorOffsets.rotationDeg.x}
                       min={0}
                       max={360}
                       step='0.01'
@@ -706,6 +824,7 @@ function App() {
                       ref={yRotationOffsetRef}
                       id="y-rotation-offset"
                       type="number"
+                      value={sensorOffsets.rotationDeg.y}
                       min={0}
                       max={360}
                       step='0.01'
@@ -718,6 +837,7 @@ function App() {
                       ref={zRotationOffsetRef}
                       id="z-rotation-offset"
                       type="number"
+                      value={sensorOffsets.rotationDeg.z}
                       min={0}
                       max={360}
                       step='0.01'
@@ -739,18 +859,27 @@ function App() {
               </Label>
               <div className='flex w-full items-center gap-2 justify-between'>
               <Input
-                  ref={configInputRef}
+                  ref={setAdjustmentsInputElement}
                   id="adjustments-file-upload"
                   type="file"
                   className="text-muted-foreground"
                   onChange={(e) => {
                     const file = e.target.files?.[0]
                     if (file) {
-                      // adjustment file handling not implemented yet,
+                      void handleAdjustmentsUpload(file)
                     }
                   }}
                 />
-                <Button size='icon' variant='outline' title='Save to player_adjustments.json' >
+                <Button
+                  id='save-adjustment-btn'
+                  size='icon'
+                  variant='outline'
+                  title='Save to adjustments-config.json'
+                  disabled={!configFile}
+                  onClick={() => {
+                    void handleAdjustmentsSave()
+                  }}
+                >
                   <SaveIcon className="h-4 w-4" />
                 </Button>
               </div>
@@ -777,6 +906,7 @@ function App() {
                 <Input
                   id="m-gst"
                   type="number"
+                  value={gazeStartMinutes}
                   placeholder="min"
                   disabled={!videoFile || !gazeFile}
                   min={0}
@@ -788,6 +918,7 @@ function App() {
                 <Input
                   id="s-gst"
                   type="number"
+                  value={gazeStartSeconds}
                   placeholder="sec"
                   disabled={!videoFile || !gazeFile || !configFile}
                   min={0}
@@ -799,6 +930,7 @@ function App() {
                 <Input
                   id="ms-gst"
                   type="number"
+                  value={gazeStartMilliseconds}
                   placeholder="ms"
                   disabled={!videoFile || !gazeFile || !configFile}
                   min={0}
@@ -834,16 +966,22 @@ function App() {
                 x
                 <Input
                   id="x-2dgaze-offset"
-                  defaultValue={0}
+                  value={gazeOffset2d.x}
                   type="number"
+                  step="1"
                   className="h-8 w-22 text-xs p-1.5"
+                  onChange={handleGazeOffset2dChange('x')}
+                  onBlur={handleGazeOffset2dBlur('x')}
                 />
                 y
                 <Input
                   id="y-2dgaze-offset"
-                  defaultValue={0}
+                  value={gazeOffset2d.y}
                   type="number"
+                  step="1"
                   className="h-8 w-22 text-xs p-1.5"
+                  onChange={handleGazeOffset2dChange('y')}
+                  onBlur={handleGazeOffset2dBlur('y')}
                 />
                 </div>
 

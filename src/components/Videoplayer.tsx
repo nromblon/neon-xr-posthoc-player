@@ -18,6 +18,11 @@ interface CircleConfig {
   color: string
 }
 
+interface GazeOffset2d {
+  x: number
+  y: number
+}
+
 interface VideoPlayerProps {
   gazeDataFile: File
   videoRef: React.RefObject<HTMLVideoElement | null>
@@ -25,6 +30,7 @@ interface VideoPlayerProps {
   xrConfigFile: File
   fovHorizontalDeg: number
   sensorOffsets: SensorOffsetValues
+  gazeOffset2d: GazeOffset2d
   circleConfig: CircleConfig
   isSavingEvents: boolean
   onFrameDurationChange?: (frameDurationSeconds: number) => void
@@ -94,6 +100,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   xrConfigFile,
   fovHorizontalDeg,
   sensorOffsets,
+  gazeOffset2d,
   circleConfig = defaultCircleConfig,
   isSavingEvents,
   onFrameDurationChange,
@@ -401,6 +408,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
             videoWidth,
             videoHeight,
             fovHorizontalDeg,
+            gazeOffsetX: gazeOffset2d.x,
+            gazeOffsetY: gazeOffset2d.y,
           })
 
           debugProjector(projector)
@@ -440,6 +449,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     }
   }, [
     fovHorizontalDeg,
+    gazeOffset2d,
     manualVideoDimensions,
     sensorOffsets,
     videoFile,
