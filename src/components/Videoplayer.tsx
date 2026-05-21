@@ -18,6 +18,7 @@ import {
   promptExportedVideoFileHandle,
   saveExportedVideoFile,
 } from '@/lib/video-export'
+import { useConfigStore } from '@/store/configStore'
 import { useEventStore } from '@/store/eventStore'
 
 interface CircleConfig {
@@ -160,7 +161,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   onExportStateChange,
 }) => {
   const timelineEvents = useEventStore((state) => state.events)
-  const gazeStartMs = useEventStore((state) => state.gazeStartTime)
+  const gazeStartMs = useConfigStore((state) => state.gazeStartTime)
   const containerRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const layerCanvasRefs = useRef<Record<string, HTMLCanvasElement | null>>({})

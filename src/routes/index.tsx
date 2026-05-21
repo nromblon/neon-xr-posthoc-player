@@ -41,7 +41,7 @@ import {
   INITIAL_VIDEO_EXPORT_STATE,
   createVideoExportState,
 } from '@/lib/video-export'
-import { useEventStore } from '@/store/eventStore'
+import { useConfigStore } from '@/store/configStore'
 import {
   Accordion,
   AccordionContent,
@@ -113,14 +113,14 @@ function App() {
   )
 
   const videoRef = useRef<HTMLVideoElement>(null)
-  const gazeStartMs = useEventStore((state) => state.gazeStartTime)
-  const sensorOffsets = useEventStore((state) => state.sensorOffsets)
-  const setGazeStartTimeInStore = useEventStore(
+  const gazeStartMs = useConfigStore((state) => state.gazeStartTime)
+  const sensorOffsets = useConfigStore((state) => state.sensorOffsets)
+  const setGazeStartTimeInStore = useConfigStore(
     (state) => state.setGazeStartTime,
   )
-  const setRotationOffset = useEventStore((state) => state.setRotationOffset)
-  const setSensorOffsets = useEventStore((state) => state.setSensorOffsets)
-  const setTranslationOffset = useEventStore(
+  const setRotationOffset = useConfigStore((state) => state.setRotationOffset)
+  const setSensorOffsets = useConfigStore((state) => state.setSensorOffsets)
+  const setTranslationOffset = useConfigStore(
     (state) => state.setTranslationOffset,
   )
   const { isSaving: isSavingEvents } = useEventPersistence({
