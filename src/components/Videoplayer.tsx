@@ -774,6 +774,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     }
 
     const exportVideo = document.createElement('video')
+    exportVideo.muted = true
     const exportVideoSource = resolveExportVideoSource(liveVideo, videoFile)
     let exportFileHandle: FileSystemFileHandle | null = null
     const fps =
@@ -786,6 +787,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     let cancelFrameCallback:
       | (() => void)
       | null = null
+    const visibilityAbortController = new AbortController()
     let exportOutput:
       | {
           cancel: () => Promise<void>
@@ -938,7 +940,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       )
       const bufferTarget = new BufferTarget()
       const videoSource = new VideoSampleSource({
-        bitrate: QUALITY_HIGH,
+        bitrate: 2_000_000,  // 2 Mbps — good balance for a gaze overlay recording
         codec: 'avc',
         keyFrameInterval: 2,
       })
@@ -956,6 +958,17 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       exportOutput.addVideoTrack(videoSource)
       exportOutput.addAudioTrack(audioSource)
       await exportOutput.start()
+
+      const handleVisibilityChange = () => {
+        if (document.hidden) {
+          exportVideo.pause()
+        } else {
+          exportVideo.play().catch(() => {})
+        }
+      }
+      document.addEventListener('visibilitychange', handleVisibilityChange, {
+        signal: visibilityAbortController.signal,
+      })
 
       setExportState(
         createVideoExportState('exporting', {
@@ -1083,6 +1096,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       exportVideo.load()
 
       cancelFrameCallback?.()
+      visibilityAbortController.abort()
 
       if (exportOutput && !outputFinalized) {
         await exportOutput.cancel()
