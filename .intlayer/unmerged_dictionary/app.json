@@ -4,7 +4,10 @@
     "content": {
       "noData": {
         "nodeType": "translation",
-        "translation": { "en": "No data", "ja": "データなし" }
+        "translation": {
+          "en": "No data",
+          "ja": "データなし"
+        }
       },
       "chooseFiles": {
         "nodeType": "translation",
@@ -15,15 +18,24 @@
       },
       "setup": {
         "nodeType": "translation",
-        "translation": { "en": "Setup", "ja": "セットアップ" }
+        "translation": {
+          "en": "Setup",
+          "ja": "セットアップ"
+        }
       },
       "recordingFolder": {
         "nodeType": "translation",
-        "translation": { "en": "Recording Folder", "ja": "録音フォルダー" }
+        "translation": {
+          "en": "Recording Folder",
+          "ja": "録音フォルダー"
+        }
       },
       "chooseFolderButton": {
         "nodeType": "translation",
-        "translation": { "en": "Choose Folder", "ja": "フォルダーを選択" }
+        "translation": {
+          "en": "Choose Folder",
+          "ja": "フォルダーを選択"
+        }
       },
       "chooseRecordingFolderPlaceholder": {
         "nodeType": "translation",
@@ -41,7 +53,10 @@
       },
       "neonGazeData": {
         "nodeType": "translation",
-        "translation": { "en": "Neon Gaze Data", "ja": "Neon 視線データ" }
+        "translation": {
+          "en": "Neon Gaze Data",
+          "ja": "Neon 視線データ"
+        }
       },
       "projectorSettings": {
         "nodeType": "translation",
@@ -73,7 +88,10 @@
       },
       "horizontalFov": {
         "nodeType": "translation",
-        "translation": { "en": "Horizontal FOV", "ja": "水平視野角" }
+        "translation": {
+          "en": "Horizontal FOV",
+          "ja": "水平視野角"
+        }
       },
       "fovSliderHint": {
         "nodeType": "translation",
@@ -84,23 +102,38 @@
       },
       "sensorOffsets": {
         "nodeType": "translation",
-        "translation": { "en": "Sensor Offsets", "ja": "センサーオフセット" }
+        "translation": {
+          "en": "Sensor Offsets",
+          "ja": "センサーオフセット"
+        }
       },
       "translationMm": {
         "nodeType": "translation",
-        "translation": { "en": "Translation (mm)", "ja": "平行移動 (mm)" }
+        "translation": {
+          "en": "Translation (mm)",
+          "ja": "平行移動 (mm)"
+        }
       },
       "rotationDeg": {
         "nodeType": "translation",
-        "translation": { "en": "Rotation (degrees)", "ja": "回転 (度)" }
+        "translation": {
+          "en": "Rotation (degrees)",
+          "ja": "回転 (度)"
+        }
       },
       "adjustments": {
         "nodeType": "translation",
-        "translation": { "en": "Adjustments", "ja": "調整" }
+        "translation": {
+          "en": "Adjustments",
+          "ja": "調整"
+        }
       },
       "adjustmentsMetadata": {
         "nodeType": "translation",
-        "translation": { "en": "Adjustments Metadata", "ja": "調整メタデータ" }
+        "translation": {
+          "en": "Adjustments Metadata",
+          "ja": "調整メタデータ"
+        }
       },
       "saveAdjustmentsTitle": {
         "nodeType": "translation",
@@ -111,7 +144,10 @@
       },
       "gazeStartTime": {
         "nodeType": "translation",
-        "translation": { "en": "Gaze Start Time", "ja": "視線開始時間" }
+        "translation": {
+          "en": "Gaze Start Time",
+          "ja": "視線開始時間"
+        }
       },
       "gazeBackOneFrame": {
         "nodeType": "translation",
@@ -136,7 +172,10 @@
       },
       "gazeOffset2d": {
         "nodeType": "translation",
-        "translation": { "en": "2D Gaze Offset", "ja": "2D 視線オフセット" }
+        "translation": {
+          "en": "2D Gaze Offset",
+          "ja": "2D 視線オフセット"
+        }
       },
       "exportGazeVideo": {
         "nodeType": "translation",
@@ -161,11 +200,17 @@
       },
       "exportInProgress": {
         "nodeType": "translation",
-        "translation": { "en": "Exporting", "ja": "エクスポート中" }
+        "translation": {
+          "en": "Exporting",
+          "ja": "エクスポート中"
+        }
       },
       "exportSaving": {
         "nodeType": "translation",
-        "translation": { "en": "Saving MP4...", "ja": "MP4を保存中..." }
+        "translation": {
+          "en": "Saving MP4...",
+          "ja": "MP4を保存中..."
+        }
       },
       "exportSuccess": {
         "nodeType": "translation",
@@ -190,7 +235,10 @@
       },
       "toastSelectionError": {
         "nodeType": "translation",
-        "translation": { "en": "Selection Error", "ja": "選択エラー" }
+        "translation": {
+          "en": "Selection Error",
+          "ja": "選択エラー"
+        }
       },
       "toastAdjustmentsLoaded": {
         "nodeType": "translation",
@@ -208,11 +256,17 @@
       },
       "toastConfigSaved": {
         "nodeType": "translation",
-        "translation": { "en": "Config Saved", "ja": "設定を保存しました" }
+        "translation": {
+          "en": "Config Saved",
+          "ja": "設定を保存しました"
+        }
       },
       "toastConfigReset": {
         "nodeType": "translation",
-        "translation": { "en": "Config Reset", "ja": "設定をリセットしました" }
+        "translation": {
+          "en": "Config Reset",
+          "ja": "設定をリセットしました"
+        }
       },
       "toastConfigResetFailed": {
         "nodeType": "translation",
@@ -223,11 +277,17 @@
       },
       "toastAdjustmentsSaved": {
         "nodeType": "translation",
-        "translation": { "en": "Adjustments Saved", "ja": "調整を保存しました" }
+        "translation": {
+          "en": "Adjustments Saved",
+          "ja": "調整を保存しました"
+        }
       },
       "toastSaveFailed": {
         "nodeType": "translation",
-        "translation": { "en": "Save Failed", "ja": "保存に失敗しました" }
+        "translation": {
+          "en": "Save Failed",
+          "ja": "保存に失敗しました"
+        }
       },
       "toastGazeFileNotFound": {
         "nodeType": "translation",
@@ -245,7 +305,10 @@
       },
       "toastDataFolderMissingGazePre": {
         "nodeType": "translation",
-        "translation": { "en": "Found '", "ja": "「" }
+        "translation": {
+          "en": "Found '",
+          "ja": "「"
+        }
       },
       "toastDataFolderMissingGazeSuf": {
         "nodeType": "translation",
@@ -326,15 +389,24 @@
       },
       "radius": {
         "nodeType": "translation",
-        "translation": { "en": "Radius", "ja": "半径" }
+        "translation": {
+          "en": "Radius",
+          "ja": "半径"
+        }
       },
       "strokeWidth": {
         "nodeType": "translation",
-        "translation": { "en": "Stroke Width", "ja": "線の太さ" }
+        "translation": {
+          "en": "Stroke Width",
+          "ja": "線の太さ"
+        }
       },
       "color": {
         "nodeType": "translation",
-        "translation": { "en": "Color", "ja": "色" }
+        "translation": {
+          "en": "Color",
+          "ja": "色"
+        }
       }
     },
     "location": "local",

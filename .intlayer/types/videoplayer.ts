@@ -1,16 +1,18 @@
- 
+/* eslint-disable */
 export default {
-  key: 'videoplayer',
-  content: {
-    nodeType: 'translation',
-    translation: {
-      en: {
-        gazeLayer: 'Gaze',
+  "key": "videoplayer",
+  "content": {
+    "nodeType": "translation",
+    "translation": {
+      "en": {
+        "gazeLayer": "Gaze"
       },
-      ja: {
-        gazeLayer: '視線',
-      },
-    },
+      "ja": {
+        "gazeLayer": "視線"
+      }
+    }
   },
-  localIds: ['videoplayer::local::src\\components\\-videoplayer.content.ts'],
-} as const
+  "localIds": [
+    "videoplayer::local::src\\components\\-videoplayer.content.ts"
+  ]
+} as const;

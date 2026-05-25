@@ -4,7 +4,10 @@
     "content": {
       "gazeLayer": {
         "nodeType": "translation",
-        "translation": { "en": "Gaze", "ja": "視線" }
+        "translation": {
+          "en": "Gaze",
+          "ja": "視線"
+        }
       }
     },
     "location": "local",

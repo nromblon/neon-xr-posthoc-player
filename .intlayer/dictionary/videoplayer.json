@@ -3,9 +3,15 @@
   "content": {
     "nodeType": "translation",
     "translation": {
-      "en": { "gazeLayer": "Gaze" },
-      "ja": { "gazeLayer": "視線" }
+      "en": {
+        "gazeLayer": "Gaze"
+      },
+      "ja": {
+        "gazeLayer": "視線"
+      }
     }
   },
-  "localIds": ["videoplayer::local::src\\components\\-videoplayer.content.ts"]
+  "localIds": [
+    "videoplayer::local::src\\components\\-videoplayer.content.ts"
+  ]
 }

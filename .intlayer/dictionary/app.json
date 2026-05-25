@@ -125,5 +125,7 @@
       }
     }
   },
-  "localIds": ["app::local::src\\routes\\-index.content.ts"]
+  "localIds": [
+    "app::local::src\\routes\\-index.content.ts"
+  ]
 }
