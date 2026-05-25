@@ -7,6 +7,7 @@ import type { Event as AnnotationEvent } from '@/types/annotations'
 import { Button } from '@/components/ui/button'
 import { InputGroup, InputGroupInput } from '@/components/ui/input-group'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { useConfigStore } from '@/store/configStore'
 import { useEventStore } from '@/store/eventStore'
 import { Badge } from '@/components/ui/badge'
 
@@ -33,7 +34,7 @@ export const VideoEventsTimeline: React.FC<VideoEventsTimelineProps> = ({
   onSeek,
 }) => {
   const addEvent = useEventStore((state) => state.addEvent)
-  const gazeStartTime = useEventStore((state) => state.gazeStartTime)
+  const gazeStartTime = useConfigStore((state) => state.gazeStartTime)
   const recordingId = useEventStore((state) => state.recordingId)
   const eventOriginTimestampNs = useEventStore(
     (state) => state.eventOriginTimestampNs,

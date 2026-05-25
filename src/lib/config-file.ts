@@ -92,7 +92,9 @@ export function formatTruncatedDecimals(value: number, decimals: number) {
   return truncateToDecimals(value, decimals).toFixed(decimals)
 }
 
-export async function readConfigOffsets(file: File): Promise<SensorOffsetValues> {
+export async function readConfigOffsets(
+  file: File,
+): Promise<SensorOffsetValues> {
   const text = await file.text()
   const config = JSON.parse(text) as NeonXRConfigFile
   const position = config.sensorCalibration?.offset?.position
@@ -185,9 +187,7 @@ export async function saveModifiedConfigFile(
   return modifiedConfigFile
 }
 
-export function buildAdjustmentsConfigText(
-  adjustments: AdjustmentsConfigFile,
-) {
+export function buildAdjustmentsConfigText(adjustments: AdjustmentsConfigFile) {
   return JSON.stringify(adjustments, null, 4)
 }
 
@@ -273,11 +273,15 @@ export async function readAdjustmentsConfig(
     gazeVisualizerStyle: {
       radius: Math.max(
         1,
-        Math.round(normalizeFiniteNumber(config.gazeVisualizerStyle?.radius, 14)),
+        Math.round(
+          normalizeFiniteNumber(config.gazeVisualizerStyle?.radius, 14),
+        ),
       ),
       stroke: Math.max(
         1,
-        Math.round(normalizeFiniteNumber(config.gazeVisualizerStyle?.stroke, 5)),
+        Math.round(
+          normalizeFiniteNumber(config.gazeVisualizerStyle?.stroke, 5),
+        ),
       ),
       color: normalizeColor(config.gazeVisualizerStyle?.color, '#FF0000'),
     },

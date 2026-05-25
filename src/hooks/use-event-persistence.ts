@@ -164,7 +164,10 @@ export function useEventPersistence({
 
         const normalizedEvents = rawEvents.map((event) => ({
           ...event,
-          timestamp_ns: Math.max(event.timestamp_ns - originTimestamp + gazeStartOffsetNs, 0),
+          timestamp_ns: Math.max(
+            event.timestamp_ns - originTimestamp + gazeStartOffsetNs,
+            0,
+          ),
         }))
 
         skipNextSaveRef.current = true

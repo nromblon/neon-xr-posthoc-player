@@ -2,10 +2,17 @@ import { Label } from '@radix-ui/react-label'
 import { createFileRoute } from '@tanstack/react-router'
 import React, { useRef } from 'react'
 import Color from 'color'
-import { BookXIcon, HistoryIcon, SaveIcon, SkipBackIcon, SkipForwardIcon } from 'lucide-react'
+import {
+  BookXIcon,
+  HistoryIcon,
+  SaveIcon,
+  SkipBackIcon,
+  SkipForwardIcon,
+} from 'lucide-react'
 import { toast } from 'sonner'
 import type { FolderPickEntry } from '@/components/ui/folder-picker'
-import type {AdjustmentsConfigFile} from '@/lib/config-file';
+import type { AdjustmentsConfigFile } from '@/lib/config-file'
+import type { VideoExportState } from '@/lib/video-export'
 import { FolderPicker } from '@/components/ui/folder-picker'
 import { Input } from '@/components/ui/input'
 import {
@@ -29,14 +36,17 @@ import {
 import { Button } from '@/components/ui/button'
 import { useEventPersistence } from '@/hooks/use-event-persistence'
 import {
-  
   formatTruncatedDecimals,
   readAdjustmentsConfig,
   readConfigOffsets,
   saveAdjustmentsConfigFile,
-  saveModifiedConfigFile
+  saveModifiedConfigFile,
 } from '@/lib/config-file'
-import { useEventStore } from '@/store/eventStore'
+import {
+  INITIAL_VIDEO_EXPORT_STATE,
+  createVideoExportState,
+} from '@/lib/video-export'
+import { useConfigStore } from '@/store/configStore'
 import {
   Accordion,
   AccordionContent,
@@ -86,6 +96,7 @@ function App() {
     React.useState<FileSystemDirectoryHandle | null>(null)
   const [recordingDirectoryHandle, setRecordingDirectoryHandle] =
     React.useState<FileSystemDirectoryHandle | null>(null)
+  const [recordingFolderLabel, setRecordingFolderLabel] = React.useState('')
   const [selectedGazeFolderLabel, setSelectedGazeFolderLabel] =
     React.useState('')
   // Scene Video Data
@@ -94,16 +105,27 @@ function App() {
   const [configFile, setConfigFile] = React.useState<File | null>(null)
   // Horizontal FOV for projection calculations
   const [fovHorizontalDeg, setFovHorizontalDeg] = React.useState(82)
+  const [exportGazeVideo, setExportGazeVideo] = React.useState<
+    (() => Promise<void>) | null
+  >(null)
+  const [videoExportState, setVideoExportState] =
+    React.useState<VideoExportState>(INITIAL_VIDEO_EXPORT_STATE)
+  const handleExportReady = React.useCallback(
+    (exportHandler: (() => Promise<void>) | null) => {
+      setExportGazeVideo(() => exportHandler)
+    },
+    [],
+  )
 
   const videoRef = useRef<HTMLVideoElement>(null)
-  const gazeStartMs = useEventStore((state) => state.gazeStartTime)
-  const sensorOffsets = useEventStore((state) => state.sensorOffsets)
-  const setGazeStartTimeInStore = useEventStore(
+  const gazeStartMs = useConfigStore((state) => state.gazeStartTime)
+  const sensorOffsets = useConfigStore((state) => state.sensorOffsets)
+  const setGazeStartTimeInStore = useConfigStore(
     (state) => state.setGazeStartTime,
   )
-  const setRotationOffset = useEventStore((state) => state.setRotationOffset)
-  const setSensorOffsets = useEventStore((state) => state.setSensorOffsets)
-  const setTranslationOffset = useEventStore(
+  const setRotationOffset = useConfigStore((state) => state.setRotationOffset)
+  const setSensorOffsets = useConfigStore((state) => state.setSensorOffsets)
+  const setTranslationOffset = useConfigStore(
     (state) => state.setTranslationOffset,
   )
   const { isSaving: isSavingEvents } = useEventPersistence({
@@ -193,7 +215,10 @@ function App() {
     })
   }
 
-  const setInputFiles = (input: HTMLInputElement | null, files: Array<File>) => {
+  const setInputFiles = (
+    input: HTMLInputElement | null,
+    files: Array<File>,
+  ) => {
     if (!input) {
       return
     }
@@ -282,6 +307,8 @@ function App() {
       .filter((entry) => entry.relativePath.split('/')[1] === dataFolderName)
       .map((entry) => entry.file)
 
+    setRecordingFolderLabel(folderName)
+
     const dataTransfer = new DataTransfer()
     for (const file of dataFolderFiles) {
       dataTransfer.items.add(file)
@@ -313,12 +340,14 @@ function App() {
         const adjustments = await readAdjustmentsConfig(adjustmentsEntry.file)
         applyAdjustmentsConfig(adjustments)
         toast.success('Adjustments Loaded', {
-          description: 'Loaded adjustments-config.json from the recording folder.',
+          description:
+            'Loaded adjustments-config.json from the recording folder.',
         })
       } catch (error) {
         console.error('Failed to parse adjustments-config.json:', error)
         toast.error('Adjustments Load Failed', {
-          description: 'Unable to parse adjustments-config.json from the recording folder.',
+          description:
+            'Unable to parse adjustments-config.json from the recording folder.',
         })
       }
     }
@@ -486,8 +515,8 @@ function App() {
     }
   }
 
-  const handleGazeOffset2dChange = (axis: 'x' | 'y') =>
-    (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleGazeOffset2dChange =
+    (axis: 'x' | 'y') => (e: React.ChangeEvent<HTMLInputElement>) => {
       const { value } = e.currentTarget
 
       if (value === '' || value === '-' || value.endsWith('.')) {
@@ -506,8 +535,8 @@ function App() {
       }))
     }
 
-  const handleGazeOffset2dBlur = (axis: 'x' | 'y') =>
-    (e: React.FocusEvent<HTMLInputElement>) => {
+  const handleGazeOffset2dBlur =
+    (axis: 'x' | 'y') => (e: React.FocusEvent<HTMLInputElement>) => {
       e.currentTarget.value = formatTruncatedDecimals(gazeOffset2d[axis], 2)
     }
 
@@ -572,6 +601,31 @@ function App() {
 
   const sectionLabelClassName = 'text-sm font-medium'
   const sectionContentClassName = 'flex flex-col gap-2'
+  const isExportBusy =
+    videoExportState.status === 'preparing' ||
+    videoExportState.status === 'exporting' ||
+    videoExportState.status === 'saving'
+  const canExportVideo =
+    Boolean(videoFile && gazeFile && configFile && exportGazeVideo) &&
+    !isExportBusy
+  const exportButtonLabel =
+    videoExportState.status === 'preparing'
+      ? 'Preparing Export...'
+      : videoExportState.status === 'exporting'
+        ? `Exporting ${videoExportState.progress}%`
+        : videoExportState.status === 'saving'
+          ? 'Saving MP4...'
+          : 'Export Gaze Video'
+  const exportStatusMessage =
+    videoExportState.status === 'success'
+      ? 'Export completed and the MP4 file was saved.'
+      : videoExportState.status === 'error'
+        ? videoExportState.errorMessage
+        : videoExportState.statusMessage
+          ? videoExportState.statusMessage
+          : !videoFile || !gazeFile || !configFile
+            ? 'Load a scene video, gaze data, and config file to enable export.'
+            : 'The export uses the current gaze timing, offsets, projector settings, and gaze style.'
 
   React.useEffect(() => {
     const updateOffsetInputValues = async () => {
@@ -582,7 +636,6 @@ function App() {
       try {
         const offsets = await readConfigOffsets(configFile)
         setSensorOffsets(offsets)
-
       } catch (error) {
         console.error('Failed to parse config.json offsets:', error)
       }
@@ -590,6 +643,24 @@ function App() {
 
     void updateOffsetInputValues()
   }, [configFile, setSensorOffsets])
+
+  React.useEffect(() => {
+    if (!videoFile || !gazeFile || !configFile) {
+      setVideoExportState(createVideoExportState('idle'))
+      setExportGazeVideo(null)
+    }
+  }, [configFile, gazeFile, videoFile])
+
+  React.useEffect(() => {
+    if (
+      exportGazeVideo &&
+      videoExportState.status === 'error' &&
+      videoExportState.errorMessage ===
+        'Load the scene video metadata before exporting.'
+    ) {
+      setVideoExportState(createVideoExportState('idle'))
+    }
+  }, [exportGazeVideo, videoExportState.errorMessage, videoExportState.status])
 
   return (
     <div className="flex justify-between items-start my-4">
@@ -601,6 +672,7 @@ function App() {
           <VideoPlayer
             videoRef={videoRef}
             gazeDataFile={gazeFile}
+            recordingLabel={recordingFolderLabel}
             videoFile={videoFile}
             xrConfigFile={configFile}
             fovHorizontalDeg={fovHorizontalDeg}
@@ -613,6 +685,8 @@ function App() {
                 setFrameDurationMs(frameDurationSeconds * 1000)
               }
             }}
+            onExportReady={handleExportReady}
+            onExportStateChange={setVideoExportState}
           />
         ) : (
           <Empty>
@@ -688,16 +762,19 @@ function App() {
                   onPick={handleGazeFolderPick}
                 />
               </div>
-              <div className='flex w-full items-center justify-between'>
-                <Label className={sectionLabelClassName} htmlFor="recording-fov">
+              <div className="flex w-full items-center justify-between">
+                <Label
+                  className={sectionLabelClassName}
+                  htmlFor="recording-fov"
+                >
                   Projector Settings
                 </Label>
-                <div className='flex space-x-2'>
+                <div className="flex space-x-2">
                   <Button
-                    id='config-reset'
+                    id="config-reset"
                     variant={'outline'}
                     size={'icon'}
-                    title='Reset to previous config.json values'
+                    title="Reset to previous config.json values"
                     disabled={!configFile}
                     onClick={() => {
                       void handleConfigReset()
@@ -706,10 +783,10 @@ function App() {
                     <HistoryIcon className="h-2 w-2" />
                   </Button>
                   <Button
-                    id='config-save'
+                    id="config-save"
                     variant={'outline'}
                     size={'icon'}
-                    title='Save to config_modified.json'
+                    title="Save to config_modified.json"
                     disabled={!configFile}
                     onClick={() => {
                       void handleConfigSave()
@@ -723,129 +800,132 @@ function App() {
                 id="projector-settings"
                 className="flex flex-col gap-2 p-4 border-2 border-accent rounded-md"
               >
-                  <Label className={'text-xs'} htmlFor="calibration-file-upload">
-                    Neon XR Calibration File (config.json)
-                  </Label>
+                <Label className={'text-xs'} htmlFor="calibration-file-upload">
+                  Neon XR Calibration File (config.json)
+                </Label>
+                <Input
+                  ref={configInputRef}
+                  id="calibration-file-upload"
+                  type="file"
+                  className="text-muted-foreground"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) {
+                      setConfigFile(file)
+                    }
+                  }}
+                />
+                <Label className="text-sm" htmlFor="recording-fov">
+                  Horizontal FOV
+                </Label>
+                <SliderNumberInput
+                  id="recording-fov"
+                  value={fovHorizontalDeg}
+                  onValueChange={setFovHorizontalDeg}
+                  sliderTitle="Lower if there is centre pull"
+                  min={45}
+                  max={120}
+                />
+                <Label
+                  className={sectionLabelClassName}
+                  htmlFor="sensor-offsets"
+                >
+                  Sensor Offsets
+                </Label>
+                <Label className="text-sm" htmlFor="sensor-translation-offsets">
+                  Translation (mm)
+                </Label>
+                <div
+                  id="sensor-translation-offsets"
+                  className="flex flex-row items-center justify-center gap-2 text-xs"
+                >
+                  x
                   <Input
-                    ref={configInputRef}
-                    id="calibration-file-upload"
-                    type="file"
-                    className="text-muted-foreground"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0]
-                      if (file) {
-                        setConfigFile(file)
-                      }
-                    }}
+                    ref={xTranslateOffsetRef}
+                    id="x-translate-offset"
+                    type="number"
+                    value={sensorOffsets.translationMm.x}
+                    step="0.1"
+                    min={-50}
+                    max={50}
+                    className="h-8 w-18 text-xs p-1.5"
+                    onChange={handleOffsetInputChange}
+                    onBlur={handleOffsetInputBlur}
                   />
-                  <Label className='text-sm' htmlFor="recording-fov">
-                    Horizontal FOV
-                  </Label>
-                  <SliderNumberInput
-                    id="recording-fov"
-                    value={fovHorizontalDeg}
-                    onValueChange={setFovHorizontalDeg}
-                    sliderTitle='Lower if there is centre pull'
-                    min={45}
-                    max={120}
+                  y
+                  <Input
+                    ref={yTranslateOffsetRef}
+                    id="y-translate-offset"
+                    type="number"
+                    value={sensorOffsets.translationMm.y}
+                    step="0.1"
+                    min={-50}
+                    max={50}
+                    className="h-8 w-18 text-xs p-1.5"
+                    onChange={handleOffsetInputChange}
+                    onBlur={handleOffsetInputBlur}
                   />
-                  <Label className={sectionLabelClassName} htmlFor="sensor-offsets">
-                    Sensor Offsets
-                  </Label>
-                  <Label className='text-sm' htmlFor="sensor-translation-offsets">
-                    Translation (mm)
-                  </Label>
-                  <div
-                    id="sensor-translation-offsets"
-                    className="flex flex-row items-center justify-center gap-2 text-xs"
-                  >
-                    x
-                    <Input
-                      ref={xTranslateOffsetRef}
-                      id="x-translate-offset"
-                      type="number"
-                      value={sensorOffsets.translationMm.x}
-                      step='0.1'
-                      min={-50}
-                      max={50}
-                      className="h-8 w-18 text-xs p-1.5"
-                      onChange={handleOffsetInputChange}
-                      onBlur={handleOffsetInputBlur}
-                    />
-                    y
-                    <Input
-                      ref={yTranslateOffsetRef}
-                      id="y-translate-offset"
-                      type="number"
-                      value={sensorOffsets.translationMm.y}
-                      step='0.1'
-                      min={-50}
-                      max={50}
-                      className="h-8 w-18 text-xs p-1.5"
-                      onChange={handleOffsetInputChange}
-                      onBlur={handleOffsetInputBlur}
-                    />
-                    z
-                    <Input
-                      ref={zTranslateOffsetRef}
-                      id="z-translate-offset"
-                      type="number"
-                      value={sensorOffsets.translationMm.z}
-                      step='0.1'
-                      min={-50}
-                      max={50}
-                      className="h-8 w-18 text-xs p-1.5"
-                      onChange={handleOffsetInputChange}
-                      onBlur={handleOffsetInputBlur}
-                    />
-                  </div>
-                  <Label className='text-sm' htmlFor="sensor-rotation-offsets">
-                    Rotation (degrees)
-                  </Label>
-                  <div
-                    id="sensor-rotation-offsets"
-                    className="flex flex-row items-center justify-center gap-2 text-xs"
-                  >
-                    x
-                    <Input
-                      ref={xRotationOffsetRef}
-                      id="x-rotation-offset"
-                      type="number"
-                      value={sensorOffsets.rotationDeg.x}
-                      min={0}
-                      max={360}
-                      step='0.01'
-                      className="h-8 w-18 text-xs p-1.5"
-                      onChange={handleOffsetInputChange}
-                      onBlur={handleOffsetInputBlur}
-                    />
-                    y
-                    <Input
-                      ref={yRotationOffsetRef}
-                      id="y-rotation-offset"
-                      type="number"
-                      value={sensorOffsets.rotationDeg.y}
-                      min={0}
-                      max={360}
-                      step='0.01'
-                      className="h-8 w-18 text-xs p-1.5"
-                      onChange={handleOffsetInputChange}
-                      onBlur={handleOffsetInputBlur}
-                    />
-                    z
-                    <Input
-                      ref={zRotationOffsetRef}
-                      id="z-rotation-offset"
-                      type="number"
-                      value={sensorOffsets.rotationDeg.z}
-                      min={0}
-                      max={360}
-                      step='0.01'
-                      className="h-8 w-18 text-xs p-1.5"
-                      onChange={handleOffsetInputChange}
-                      onBlur={handleOffsetInputBlur}
-                    />
-                  </div>
+                  z
+                  <Input
+                    ref={zTranslateOffsetRef}
+                    id="z-translate-offset"
+                    type="number"
+                    value={sensorOffsets.translationMm.z}
+                    step="0.1"
+                    min={-50}
+                    max={50}
+                    className="h-8 w-18 text-xs p-1.5"
+                    onChange={handleOffsetInputChange}
+                    onBlur={handleOffsetInputBlur}
+                  />
+                </div>
+                <Label className="text-sm" htmlFor="sensor-rotation-offsets">
+                  Rotation (degrees)
+                </Label>
+                <div
+                  id="sensor-rotation-offsets"
+                  className="flex flex-row items-center justify-center gap-2 text-xs"
+                >
+                  x
+                  <Input
+                    ref={xRotationOffsetRef}
+                    id="x-rotation-offset"
+                    type="number"
+                    value={sensorOffsets.rotationDeg.x}
+                    min={0}
+                    max={360}
+                    step="0.01"
+                    className="h-8 w-18 text-xs p-1.5"
+                    onChange={handleOffsetInputChange}
+                    onBlur={handleOffsetInputBlur}
+                  />
+                  y
+                  <Input
+                    ref={yRotationOffsetRef}
+                    id="y-rotation-offset"
+                    type="number"
+                    value={sensorOffsets.rotationDeg.y}
+                    min={0}
+                    max={360}
+                    step="0.01"
+                    className="h-8 w-18 text-xs p-1.5"
+                    onChange={handleOffsetInputChange}
+                    onBlur={handleOffsetInputBlur}
+                  />
+                  z
+                  <Input
+                    ref={zRotationOffsetRef}
+                    id="z-rotation-offset"
+                    type="number"
+                    value={sensorOffsets.rotationDeg.z}
+                    min={0}
+                    max={360}
+                    step="0.01"
+                    className="h-8 w-18 text-xs p-1.5"
+                    onChange={handleOffsetInputChange}
+                    onBlur={handleOffsetInputBlur}
+                  />
+                </div>
               </div>
             </AccordionContent>
           </AccordionItem>
@@ -854,11 +934,14 @@ function App() {
               Adjustments
             </AccordionTrigger>
             <AccordionContent className={sectionContentClassName}>
-              <Label className={sectionLabelClassName} htmlFor="adjustments-file-upload">
+              <Label
+                className={sectionLabelClassName}
+                htmlFor="adjustments-file-upload"
+              >
                 Adjustments Metadata
               </Label>
-              <div className='flex w-full items-center gap-2 justify-between'>
-              <Input
+              <div className="flex w-full items-center gap-2 justify-between">
+                <Input
                   ref={setAdjustmentsInputElement}
                   id="adjustments-file-upload"
                   type="file"
@@ -871,10 +954,10 @@ function App() {
                   }}
                 />
                 <Button
-                  id='save-adjustment-btn'
-                  size='icon'
-                  variant='outline'
-                  title='Save to adjustments-config.json'
+                  id="save-adjustment-btn"
+                  size="icon"
+                  variant="outline"
+                  title="Save to adjustments-config.json"
                   disabled={!configFile}
                   onClick={() => {
                     void handleAdjustmentsSave()
@@ -956,7 +1039,10 @@ function App() {
               >
                 Set Current Time as Gaze Start Time
               </Button>
-              <Label className={sectionLabelClassName} htmlFor="player-gaze-offset">
+              <Label
+                className={sectionLabelClassName}
+                htmlFor="player-gaze-offset"
+              >
                 2D Gaze Offset
               </Label>
               <div
@@ -983,8 +1069,35 @@ function App() {
                   onChange={handleGazeOffset2dChange('y')}
                   onBlur={handleGazeOffset2dBlur('y')}
                 />
-                </div>
-
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+          <AccordionItem value="export-gaze-video">
+            <AccordionTrigger className="text-lg font-semibold">
+              Export Gaze Video
+            </AccordionTrigger>
+            <AccordionContent className={sectionContentClassName}>
+              <p className="text-sm text-muted-foreground">
+                Export the current scene video with the gaze overlay burned into
+                an MP4 file.
+              </p>
+              <Button
+                disabled={!canExportVideo}
+                onClick={() => {
+                  void exportGazeVideo?.()
+                }}
+              >
+                {exportButtonLabel}
+              </Button>
+              <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                <div
+                  className="h-full bg-primary transition-[width]"
+                  style={{ width: `${videoExportState.progress}%` }}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {exportStatusMessage}
+              </p>
             </AccordionContent>
           </AccordionItem>
           <AccordionItem value="visualizer-style">
