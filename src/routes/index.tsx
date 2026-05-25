@@ -1,6 +1,7 @@
 import { Label } from '@radix-ui/react-label'
 import { createFileRoute } from '@tanstack/react-router'
 import React, { useRef } from 'react'
+import { useIntlayer } from 'react-intlayer'
 import Color from 'color'
 import {
   BookXIcon,
@@ -67,6 +68,7 @@ const SCENE_VIDEO_EXTENSIONS = new Set([
 ])
 
 function App() {
+  const content = useIntlayer('app')
   const [radius, setRadius] = React.useState(14)
   const [stroke, setStroke] = React.useState(5)
   const [color, setColor] = React.useState('#FF0000')
@@ -610,22 +612,22 @@ function App() {
     !isExportBusy
   const exportButtonLabel =
     videoExportState.status === 'preparing'
-      ? 'Preparing Export...'
+      ? content.exportPreparing
       : videoExportState.status === 'exporting'
-        ? `Exporting ${videoExportState.progress}%`
+        ? `${String(content.exportInProgress)} ${videoExportState.progress}%`
         : videoExportState.status === 'saving'
-          ? 'Saving MP4...'
-          : 'Export Gaze Video'
+          ? content.exportSaving
+          : content.exportGazeVideo
   const exportStatusMessage =
     videoExportState.status === 'success'
-      ? 'Export completed and the MP4 file was saved.'
+      ? content.exportSuccess
       : videoExportState.status === 'error'
         ? videoExportState.errorMessage
         : videoExportState.statusMessage
           ? videoExportState.statusMessage
           : !videoFile || !gazeFile || !configFile
-            ? 'Load a scene video, gaze data, and config file to enable export.'
-            : 'The export uses the current gaze timing, offsets, projector settings, and gaze style.'
+            ? content.exportLoadFilesHint
+            : content.exportUsesSettings
 
   React.useEffect(() => {
     const updateOffsetInputValues = async () => {
@@ -694,10 +696,8 @@ function App() {
               <EmptyMedia variant="icon">
                 <BookXIcon />
               </EmptyMedia>
-              <EmptyTitle>No data</EmptyTitle>
-              <EmptyDescription>
-                Choose XR Video and Gaze Data Folder
-              </EmptyDescription>
+              <EmptyTitle>{content.noData}</EmptyTitle>
+              <EmptyDescription>{content.chooseFiles}</EmptyDescription>
             </EmptyHeader>
           </Empty>
         )}
@@ -709,20 +709,20 @@ function App() {
         <Accordion type="multiple">
           <AccordionItem value="setup">
             <AccordionTrigger className="text-lg font-semibold">
-              Setup
+              {content.setup}
             </AccordionTrigger>
             <AccordionContent className={sectionContentClassName}>
               <Label
                 className={sectionLabelClassName}
                 htmlFor="recording-folder-upload"
               >
-                Recording Folder
+                {content.recordingFolder}
               </Label>
               <FolderPicker
                 key={packagePickerKey}
                 inputRef={packagePickerRef}
-                buttonLabel="Choose Folder"
-                placeholder="Choose a recording folder"
+                buttonLabel={String(content.chooseFolderButton)}
+                placeholder={String(content.chooseRecordingFolderPlaceholder)}
                 onPick={(files, folderName, directoryHandle, entries) => {
                   void handlePackageFolderPick(
                     files,
@@ -738,7 +738,7 @@ function App() {
                 className="flex flex-col gap-2 p-4 border-2 border-accent rounded-md"
               >
                 <Label className={'text-xs'} htmlFor="xr-file-upload">
-                  XR Video (Scene Video)
+                  {content.xrVideoLabel}
                 </Label>
                 <Input
                   ref={videoInputRef}
@@ -753,7 +753,7 @@ function App() {
                   }}
                 />
                 <Label className={'text-xs'} htmlFor="neon-gaze-upload">
-                  Neon Gaze Data
+                  {content.neonGazeData}
                 </Label>
                 <FolderPicker
                   key={folderPickerKey}
@@ -767,14 +767,14 @@ function App() {
                   className={sectionLabelClassName}
                   htmlFor="recording-fov"
                 >
-                  Projector Settings
+                  {content.projectorSettings}
                 </Label>
                 <div className="flex space-x-2">
                   <Button
                     id="config-reset"
                     variant={'outline'}
                     size={'icon'}
-                    title="Reset to previous config.json values"
+                    title={String(content.resetConfigTitle)}
                     disabled={!configFile}
                     onClick={() => {
                       void handleConfigReset()
@@ -786,7 +786,7 @@ function App() {
                     id="config-save"
                     variant={'outline'}
                     size={'icon'}
-                    title="Save to config_modified.json"
+                    title={String(content.saveConfigTitle)}
                     disabled={!configFile}
                     onClick={() => {
                       void handleConfigSave()
@@ -801,7 +801,7 @@ function App() {
                 className="flex flex-col gap-2 p-4 border-2 border-accent rounded-md"
               >
                 <Label className={'text-xs'} htmlFor="calibration-file-upload">
-                  Neon XR Calibration File (config.json)
+                  {content.calibrationFile}
                 </Label>
                 <Input
                   ref={configInputRef}
@@ -816,13 +816,13 @@ function App() {
                   }}
                 />
                 <Label className="text-sm" htmlFor="recording-fov">
-                  Horizontal FOV
+                  {content.horizontalFov}
                 </Label>
                 <SliderNumberInput
                   id="recording-fov"
                   value={fovHorizontalDeg}
                   onValueChange={setFovHorizontalDeg}
-                  sliderTitle="Lower if there is centre pull"
+                  sliderTitle={String(content.fovSliderHint)}
                   min={45}
                   max={120}
                 />
@@ -830,10 +830,10 @@ function App() {
                   className={sectionLabelClassName}
                   htmlFor="sensor-offsets"
                 >
-                  Sensor Offsets
+                  {content.sensorOffsets}
                 </Label>
                 <Label className="text-sm" htmlFor="sensor-translation-offsets">
-                  Translation (mm)
+                  {content.translationMm}
                 </Label>
                 <div
                   id="sensor-translation-offsets"
@@ -880,7 +880,7 @@ function App() {
                   />
                 </div>
                 <Label className="text-sm" htmlFor="sensor-rotation-offsets">
-                  Rotation (degrees)
+                  {content.rotationDeg}
                 </Label>
                 <div
                   id="sensor-rotation-offsets"
@@ -931,14 +931,14 @@ function App() {
           </AccordionItem>
           <AccordionItem value="adjust">
             <AccordionTrigger className="text-lg font-semibold">
-              Adjustments
+              {content.adjustments}
             </AccordionTrigger>
             <AccordionContent className={sectionContentClassName}>
               <Label
                 className={sectionLabelClassName}
                 htmlFor="adjustments-file-upload"
               >
-                Adjustments Metadata
+                {content.adjustmentsMetadata}
               </Label>
               <div className="flex w-full items-center gap-2 justify-between">
                 <Input
@@ -957,7 +957,7 @@ function App() {
                   id="save-adjustment-btn"
                   size="icon"
                   variant="outline"
-                  title="Save to adjustments-config.json"
+                  title={String(content.saveAdjustmentsTitle)}
                   disabled={!configFile}
                   onClick={() => {
                     void handleAdjustmentsSave()
@@ -970,7 +970,7 @@ function App() {
                 className={sectionLabelClassName}
                 htmlFor="gaze-start-time"
               >
-                Gaze Start Time
+                {content.gazeStartTime}
               </Label>
               <div
                 id="gaze-start-time"
@@ -980,7 +980,7 @@ function App() {
                   type="button"
                   variant="outline"
                   size="icon"
-                  title="Press when gaze is behind by one frame"
+                  title={String(content.gazeBackOneFrame)}
                   onClick={() => shiftGazeStartByFrame(-1)}
                   disabled={!videoFile || !gazeFile || !configFile}
                 >
@@ -1025,7 +1025,7 @@ function App() {
                   type="button"
                   variant="outline"
                   size="icon"
-                  title="Press when gaze is ahead by one frame"
+                  title={String(content.gazeForwardOneFrame)}
                   onClick={() => shiftGazeStartByFrame(1)}
                   disabled={!videoFile || !gazeFile || !configFile}
                 >
@@ -1037,13 +1037,13 @@ function App() {
                 disabled={!videoFile || !gazeFile || !configFile}
                 className="w-full"
               >
-                Set Current Time as Gaze Start Time
+                {content.setCurrentTimeAsGazeStart}
               </Button>
               <Label
                 className={sectionLabelClassName}
                 htmlFor="player-gaze-offset"
               >
-                2D Gaze Offset
+                {content.gazeOffset2d}
               </Label>
               <div
                 id="player-gaze-offset"
@@ -1074,12 +1074,11 @@ function App() {
           </AccordionItem>
           <AccordionItem value="export-gaze-video">
             <AccordionTrigger className="text-lg font-semibold">
-              Export Gaze Video
+              {content.exportGazeVideo}
             </AccordionTrigger>
             <AccordionContent className={sectionContentClassName}>
               <p className="text-sm text-muted-foreground">
-                Export the current scene video with the gaze overlay burned into
-                an MP4 file.
+                {content.exportDescription}
               </p>
               <Button
                 disabled={!canExportVideo}
@@ -1102,11 +1101,11 @@ function App() {
           </AccordionItem>
           <AccordionItem value="visualizer-style">
             <AccordionTrigger className="text-lg font-semibold">
-              Gaze Visualizer Style
+              {content.gazeVisualizerStyle}
             </AccordionTrigger>
             <AccordionContent className={sectionContentClassName}>
               <Label className={sectionLabelClassName} htmlFor="gaze-radius">
-                Radius
+                {content.radius}
               </Label>
               <SliderNumberInput
                 id="gaze-radius"
@@ -1116,7 +1115,7 @@ function App() {
                 max={100}
               />
               <Label className={sectionLabelClassName} htmlFor="gaze-stroke">
-                Stroke Width
+                {content.strokeWidth}
               </Label>
               <SliderNumberInput
                 id="gaze-stroke"
@@ -1126,7 +1125,7 @@ function App() {
                 max={100}
               />
               <Label className={sectionLabelClassName} htmlFor="gaze-color">
-                Color
+                {content.color}
               </Label>
               <ColorPicker
                 id="gaze-color"
