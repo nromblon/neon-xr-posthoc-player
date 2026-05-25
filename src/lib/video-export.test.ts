@@ -112,9 +112,9 @@ describe('video-export helpers', () => {
     const createObjectURL = vi
       .spyOn(URL, 'createObjectURL')
       .mockReturnValue('blob:mock-export')
-    const revokeObjectURL = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(
-      () => undefined,
-    )
+    const revokeObjectURL = vi
+      .spyOn(URL, 'revokeObjectURL')
+      .mockImplementation(() => undefined)
     const click = vi.fn()
     const anchor = {
       click,
@@ -122,9 +122,9 @@ describe('video-export helpers', () => {
       href: '',
     }
     const documentMock = {
-      createElement: vi.fn().mockReturnValue(
-        anchor as unknown as HTMLAnchorElement,
-      ),
+      createElement: vi
+        .fn()
+        .mockReturnValue(anchor as unknown as HTMLAnchorElement),
     }
     vi.stubGlobal('document', documentMock)
     vi.spyOn(documentMock, 'createElement').mockReturnValue(

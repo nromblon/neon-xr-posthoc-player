@@ -39,7 +39,9 @@ export function createVideoExportState(
 ): VideoExportState {
   return {
     status,
-    progress: clampProgress(options?.progress ?? (status === 'success' ? 100 : 0)),
+    progress: clampProgress(
+      options?.progress ?? (status === 'success' ? 100 : 0),
+    ),
     errorMessage: options?.errorMessage ?? null,
     statusMessage: options?.statusMessage ?? null,
   }
@@ -68,9 +70,7 @@ export function clampProgress(progress: number) {
   return Math.min(100, Math.max(0, Math.round(progress)))
 }
 
-export function getVideoExportSupportError(
-  options: VideoExportSupportOptions,
-) {
+export function getVideoExportSupportError(options: VideoExportSupportOptions) {
   const {
     audioRequired = true,
     videoEncoderAvailable = typeof VideoEncoder !== 'undefined',

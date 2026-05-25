@@ -105,7 +105,8 @@ export function FolderPicker({
     }
 
     const first = files[0]
-    const folderName = first.webkitRelativePath.split('/')[0] || 'Selected folder'
+    const folderName =
+      first.webkitRelativePath.split('/')[0] || 'Selected folder'
     const entries = Array.from(files).map((file) => ({
       file,
       relativePath: file.webkitRelativePath || `${folderName}/${file.name}`,

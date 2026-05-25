@@ -125,7 +125,9 @@ function waitForEvent(
 
 function getVideoCaptureStream(video: HTMLVideoElement) {
   const captureVideo = video as VideoWithCaptureStream
-  return captureVideo.captureStream?.() ?? captureVideo.mozCaptureStream?.() ?? null
+  return (
+    captureVideo.captureStream?.() ?? captureVideo.mozCaptureStream?.() ?? null
+  )
 }
 
 function resolveExportVideoSource(
@@ -737,7 +739,12 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       video.removeEventListener('volumechange', handleVolumeChange)
       video.removeEventListener('ratechange', handleRateChange)
     }
-  }, [drawLayersForVideo, manualVideoDimensions, onFrameDurationChange, videoRef])
+  }, [
+    drawLayersForVideo,
+    manualVideoDimensions,
+    onFrameDurationChange,
+    videoRef,
+  ])
 
   const exportGazeVideo = useCallback(async () => {
     if (exportSupportError) {
@@ -750,7 +757,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     }
 
     const liveVideo = videoRef.current
-    const videoWidth = manualVideoDimensions?.width ?? liveVideo?.videoWidth ?? 0
+    const videoWidth =
+      manualVideoDimensions?.width ?? liveVideo?.videoWidth ?? 0
     const videoHeight =
       manualVideoDimensions?.height ?? liveVideo?.videoHeight ?? 0
 
@@ -784,16 +792,12 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     const exportGazeIndexRef = { current: 0 }
     const overlayCanvases: Record<string, HTMLCanvasElement | null> = {}
     let videoStream: MediaStream | null = null
-    let cancelFrameCallback:
-      | (() => void)
-      | null = null
+    let cancelFrameCallback: (() => void) | null = null
     const visibilityAbortController = new AbortController()
-    let exportOutput:
-      | {
-          cancel: () => Promise<void>
-          finalize: () => Promise<void>
-        }
-      | null = null
+    let exportOutput: {
+      cancel: () => Promise<void>
+      finalize: () => Promise<void>
+    } | null = null
     let outputFinalized = false
 
     exportVideo.preload = 'auto'
@@ -849,7 +853,9 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         ? exportVideo.duration
         : 0
       const progress =
-        durationSeconds > 0 ? (exportVideo.currentTime / durationSeconds) * 100 : 0
+        durationSeconds > 0
+          ? (exportVideo.currentTime / durationSeconds) * 100
+          : 0
       setExportState(
         createVideoExportState('exporting', {
           progress,
@@ -940,7 +946,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       )
       const bufferTarget = new BufferTarget()
       const videoSource = new VideoSampleSource({
-        bitrate: 2_000_000,  // 2 Mbps — good balance for a gaze overlay recording
+        bitrate: 2_000_000, // 2 Mbps — good balance for a gaze overlay recording
         codec: 'avc',
         keyFrameInterval: 2,
       })
@@ -1009,11 +1015,15 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
       if (typeof exportVideo.requestVideoFrameCallback === 'function') {
         let callbackHandle = 0
-        const handleVideoFrame: VideoFrameRequestCallback = (_now, metadata) => {
+        const handleVideoFrame: VideoFrameRequestCallback = (
+          _now,
+          metadata,
+        ) => {
           queueFrame(metadata.mediaTime)
 
           if (!exportVideo.ended) {
-            callbackHandle = exportVideo.requestVideoFrameCallback(handleVideoFrame)
+            callbackHandle =
+              exportVideo.requestVideoFrameCallback(handleVideoFrame)
           }
         }
 
@@ -1040,11 +1050,18 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       }
 
       await exportVideo.play()
-      await Promise.race([waitForEvent(exportVideo, 'ended'), audioSourceErrorPromise])
+      await Promise.race([
+        waitForEvent(exportVideo, 'ended'),
+        audioSourceErrorPromise,
+      ])
 
       cancelFrameCallback()
       cancelFrameCallback = null
-      queueFrame(Number.isFinite(exportVideo.duration) ? exportVideo.duration : exportVideo.currentTime)
+      queueFrame(
+        Number.isFinite(exportVideo.duration)
+          ? exportVideo.duration
+          : exportVideo.currentTime,
+      )
       await frameEncodeQueue
       updateProgress()
 
@@ -1063,11 +1080,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       }
 
       const exportBlob = new Blob([exportBuffer], { type: 'video/mp4' })
-      await saveExportedVideoFile(
-        exportBlob,
-        recordingLabel,
-        exportFileHandle,
-      )
+      await saveExportedVideoFile(exportBlob, recordingLabel, exportFileHandle)
 
       setExportState(
         createVideoExportState('success', {
