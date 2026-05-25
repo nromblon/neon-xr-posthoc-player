@@ -10,6 +10,7 @@ import {
   VolumeOffIcon,
 } from 'lucide-react'
 import React from 'react'
+import { useIntlayer } from 'react-intlayer'
 
 import { VideoEventsTimeline } from './video-events-timeline'
 import type { Event as AnnotationEvent } from '@/types/annotations'
@@ -75,6 +76,7 @@ export const VideoControls: React.FC<VideoControlsProps> = ({
   onUpdateVolume,
   formatTime,
 }) => {
+  const content = useIntlayer('videoControls')
   return (
     <div className="rounded-lg border bg-card shadow-sm">
       <div className="border-b p-3">
@@ -85,14 +87,14 @@ export const VideoControls: React.FC<VideoControlsProps> = ({
             className="w-20 shrink-0"
           >
             {isPlaying ? <PauseIcon /> : <PlayIcon />}
-            {isPlaying ? 'Pause' : 'Play'}
+            {isPlaying ? content.pause : content.play}
           </Button>
           <Button
             onClick={() => onStepFrame(-1)}
             size="icon-sm"
             variant="outline"
-            title="Step backward one frame"
-            aria-label="Step backward one frame"
+            title={String(content.stepBackward)}
+            aria-label={String(content.stepBackward)}
             className="shrink-0"
           >
             <SkipBackIcon />
@@ -101,8 +103,8 @@ export const VideoControls: React.FC<VideoControlsProps> = ({
             onClick={() => onStepFrame(1)}
             size="icon-sm"
             variant="outline"
-            title="Step forward one frame"
-            aria-label="Step forward one frame"
+            title={String(content.stepForward)}
+            aria-label={String(content.stepForward)}
             className="shrink-0"
           >
             <SkipForwardIcon />
@@ -113,8 +115,8 @@ export const VideoControls: React.FC<VideoControlsProps> = ({
                 onClick={onToggleMute}
                 size="icon-sm"
                 variant="outline"
-                title={isMuted || volume === 0 ? 'Unmute' : 'Mute'}
-                aria-label={isMuted || volume === 0 ? 'Unmute' : 'Mute'}
+                title={String(isMuted || volume === 0 ? content.unmute : content.mute)}
+                aria-label={String(isMuted || volume === 0 ? content.unmute : content.mute)}
                 className="shrink-0"
               >
                 {isMuted || volume === 0 ? <VolumeOffIcon /> : <Volume2Icon />}
@@ -123,7 +125,7 @@ export const VideoControls: React.FC<VideoControlsProps> = ({
             <HoverCardContent className="w-44 p-3" side="top" align="start">
               <div className="space-y-2">
                 <div className="text-xs font-medium text-muted-foreground">
-                  Volume
+                  {content.volume}
                 </div>
                 <Slider
                   min={0}
@@ -134,7 +136,7 @@ export const VideoControls: React.FC<VideoControlsProps> = ({
                     const [nextVolume = 0] = values
                     onUpdateVolume(nextVolume)
                   }}
-                  aria-label="Volume"
+                  aria-label={String(content.volume)}
                 />
               </div>
             </HoverCardContent>
@@ -144,8 +146,8 @@ export const VideoControls: React.FC<VideoControlsProps> = ({
               <Button
                 size="icon-sm"
                 variant="outline"
-                title={`Playback speed: ${playbackRate}x`}
-                aria-label={`Playback speed: ${playbackRate}x`}
+                title={`${String(content.playbackSpeedPrefix)}${playbackRate}x`}
+                aria-label={`${String(content.playbackSpeedPrefix)}${playbackRate}x`}
                 className="shrink-0"
               >
                 <GaugeIcon />
@@ -159,7 +161,7 @@ export const VideoControls: React.FC<VideoControlsProps> = ({
                     onClick={() => onUpdatePlaybackRate(rate)}
                     size="sm"
                     variant={playbackRate === rate ? 'default' : 'outline'}
-                    title={`Set playback speed to ${rate}x`}
+                    title={`${String(content.setPlaybackSpeedPre)}${rate}x${String(content.setPlaybackSpeedPost)}`}
                   >
                     {rate}x
                   </Button>
@@ -171,14 +173,14 @@ export const VideoControls: React.FC<VideoControlsProps> = ({
             onClick={() => void onToggleFullscreen()}
             size="icon-sm"
             variant="outline"
-            title={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
-            aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+            title={String(isFullscreen ? content.exitFullscreen : content.enterFullscreen)}
+            aria-label={String(isFullscreen ? content.exitFullscreen : content.enterFullscreen)}
             className="shrink-0"
           >
             {isFullscreen ? <MinimizeIcon /> : <MaximizeIcon />}
           </Button>
           <span className="text-sm font-medium ml-2 text-muted-foreground">
-            Layers
+            {content.layers}
           </span>
           {layers.map((layer) => (
             <Button

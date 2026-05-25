@@ -1,5 +1,6 @@
 import { SearchIcon } from 'lucide-react'
 import React from 'react'
+import { useIntlayer } from 'react-intlayer'
 
 import { Spinner } from '../ui/spinner'
 import { EventRow } from './event-row'
@@ -33,6 +34,7 @@ export const VideoEventsTimeline: React.FC<VideoEventsTimelineProps> = ({
   isSaving,
   onSeek,
 }) => {
+  const content = useIntlayer('videoTimeline')
   const addEvent = useEventStore((state) => state.addEvent)
   const gazeStartTime = useConfigStore((state) => state.gazeStartTime)
   const recordingId = useEventStore((state) => state.recordingId)
@@ -171,9 +173,7 @@ export const VideoEventsTimeline: React.FC<VideoEventsTimelineProps> = ({
     }
 
     if (LOCKED_EVENT_NAMES.has(trimmedName)) {
-      window.alert(
-        `"${trimmedName}" is reserved and cannot be created manually.`,
-      )
+      window.alert(`"${trimmedName}"${String(content.isReservedSuffix)}`)
       return
     }
 
@@ -204,9 +204,7 @@ export const VideoEventsTimeline: React.FC<VideoEventsTimelineProps> = ({
     }
 
     const shouldDelete = window.confirm(
-      `Delete "${eventItem.name}" at ${formatTime(
-        eventItem.timestamp_ns / 1_000_000_000,
-      )}?`,
+      `${String(content.deleteEventPrefix)} "${eventItem.name}" (${formatTime(eventItem.timestamp_ns / 1_000_000_000)})?`,
     )
 
     if (!shouldDelete) {
@@ -226,18 +224,18 @@ export const VideoEventsTimeline: React.FC<VideoEventsTimelineProps> = ({
             className="text-xs"
             onClick={handleAddEvent}
           >
-            + Add Event
+            {content.addEvent}
           </Button>
           {isSaving ? (
             <Badge variant={'secondary'}>
               <Spinner data-icon="inline-start" />
-              Saving Events
+              {content.savingEvents}
             </Badge>
           ) : null}
         </div>
         <InputGroup className="w-44">
           <SearchIcon className="ml-2 size-4 text-muted-foreground" />
-          <InputGroupInput placeholder="Search events..." className="text-xs" />
+          <InputGroupInput placeholder={String(content.searchEventsPlaceholder)} className="text-xs" />
         </InputGroup>
       </div>
 
@@ -246,7 +244,7 @@ export const VideoEventsTimeline: React.FC<VideoEventsTimelineProps> = ({
           className="grid border-b bg-muted/30 text-[11px] font-medium uppercase tracking-wide text-muted-foreground"
           style={{ gridTemplateColumns: timelineGridTemplate }}
         >
-          <div className="border-r px-4 py-2">Track</div>
+          <div className="border-r px-4 py-2">{content.track}</div>
           <div className="relative px-4 py-2">
             <div className="relative h-4">
               {tickMarks.map((tick) => (
@@ -352,7 +350,7 @@ export const VideoEventsTimeline: React.FC<VideoEventsTimelineProps> = ({
               style={{ gridTemplateColumns: timelineGridTemplate }}
             >
               <div className="border-r px-4 py-3 text-sm font-medium">
-                Events
+                {content.events}
               </div>
               <div className="relative px-4 py-3">
                 <div
@@ -385,7 +383,7 @@ export const VideoEventsTimeline: React.FC<VideoEventsTimelineProps> = ({
                         title={
                           LOCKED_EVENT_NAMES.has(eventItem.name)
                             ? eventItem.name
-                            : 'Right-click to delete this event'
+                            : String(content.rightClickToDelete)
                         }
                       >
                         <div className="h-2 w-2 rotate-45 border border-foreground/70 bg-background" />

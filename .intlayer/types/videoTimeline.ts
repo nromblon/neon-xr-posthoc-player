@@ -1,0 +1,32 @@
+/* eslint-disable */
+export default {
+  "key": "videoTimeline",
+  "content": {
+    "nodeType": "translation",
+    "translation": {
+      "en": {
+        "addEvent": "+ Add Event",
+        "savingEvents": "Saving Events",
+        "searchEventsPlaceholder": "Search events...",
+        "track": "Track",
+        "events": "Events",
+        "rightClickToDelete": "Right-click to delete this event",
+        "isReservedSuffix": " is reserved and cannot be created manually.",
+        "deleteEventPrefix": "Delete"
+      },
+      "ja": {
+        "addEvent": "+ イベントを追加",
+        "savingEvents": "イベントを保存中",
+        "searchEventsPlaceholder": "イベントを検索...",
+        "track": "トラック",
+        "events": "イベント",
+        "rightClickToDelete": "右クリックで削除",
+        "isReservedSuffix": "は予約済みのため手動で作成できません。",
+        "deleteEventPrefix": "削除"
+      }
+    }
+  },
+  "localIds": [
+    "videoTimeline::local::src\\components\\video-player\\-video-events-timeline.content.ts"
+  ]
+} as const;

@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
+import { useIntlayer } from 'react-intlayer'
 
 import { VideoControls } from './video-player/video-controls'
 import type { SensorOffsetValues } from '@/lib/config-file'
@@ -162,6 +163,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   onExportReady,
   onExportStateChange,
 }) => {
+  const content = useIntlayer('videoplayer')
   const timelineEvents = useEventStore((state) => state.events)
   const gazeStartMs = useConfigStore((state) => state.gazeStartTime)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -363,12 +365,12 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   useEffect(() => {
     registerLayer({
       id: 'gaze',
-      label: 'Gaze',
+      label: String(content.gazeLayer),
       draw: ({ canvas, context, video }) =>
         drawGazeLayer({ canvas, context, video }, gazeIndexRef),
     })
     return () => unregisterLayer('gaze')
-  }, [drawGazeLayer, registerLayer, unregisterLayer])
+  }, [content.gazeLayer, drawGazeLayer, registerLayer, unregisterLayer])
 
   // On Gaze Circle Config Change: update ref and redraw
   useEffect(() => {
