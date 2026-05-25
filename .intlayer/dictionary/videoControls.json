@@ -1,1 +1,41 @@
-{"key":"videoControls","content":{"nodeType":"translation","translation":{"en":{"play":"Play","pause":"Pause","stepBackward":"Step backward one frame","stepForward":"Step forward one frame","mute":"Mute","unmute":"Unmute","volume":"Volume","playbackSpeedPrefix":"Playback speed: ","setPlaybackSpeedPre":"Set playback speed to ","setPlaybackSpeedPost":"","enterFullscreen":"Enter fullscreen","exitFullscreen":"Exit fullscreen","layers":"Layers"},"ja":{"play":"再生","pause":"一時停止","stepBackward":"1フレーム後退","stepForward":"1フレーム前進","mute":"ミュート","unmute":"ミュート解除","volume":"音量","playbackSpeedPrefix":"再生速度: ","setPlaybackSpeedPre":"再生速度を","setPlaybackSpeedPost":"に設定","enterFullscreen":"全画面表示","exitFullscreen":"全画面表示を終了","layers":"レイヤー"}}},"localIds":["videoControls::local::src\\components\\video-player\\-video-controls.content.ts"]}
+{
+  "key": "videoControls",
+  "content": {
+    "nodeType": "translation",
+    "translation": {
+      "en": {
+        "play": "Play",
+        "pause": "Pause",
+        "stepBackward": "Step backward one frame",
+        "stepForward": "Step forward one frame",
+        "mute": "Mute",
+        "unmute": "Unmute",
+        "volume": "Volume",
+        "playbackSpeedPrefix": "Playback speed: ",
+        "setPlaybackSpeedPre": "Set playback speed to ",
+        "setPlaybackSpeedPost": "",
+        "enterFullscreen": "Enter fullscreen",
+        "exitFullscreen": "Exit fullscreen",
+        "layers": "Layers"
+      },
+      "ja": {
+        "play": "再生",
+        "pause": "一時停止",
+        "stepBackward": "1フレーム後退",
+        "stepForward": "1フレーム前進",
+        "mute": "ミュート",
+        "unmute": "ミュート解除",
+        "volume": "音量",
+        "playbackSpeedPrefix": "再生速度: ",
+        "setPlaybackSpeedPre": "再生速度を",
+        "setPlaybackSpeedPost": "に設定",
+        "enterFullscreen": "全画面表示",
+        "exitFullscreen": "全画面表示を終了",
+        "layers": "レイヤー"
+      }
+    }
+  },
+  "localIds": [
+    "videoControls::local::src\\components\\video-player\\-video-controls.content.ts"
+  ]
+}

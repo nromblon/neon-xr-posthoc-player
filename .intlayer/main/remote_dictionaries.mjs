@@ -1,8 +1,5 @@
+const dictionaries = {}
+const getRemoteDictionaries = () => dictionaries
 
-const dictionaries = {
-
-};
-const getRemoteDictionaries = () => dictionaries;
-
-export { getRemoteDictionaries };
-export default dictionaries;
+export { getRemoteDictionaries }
+export default dictionaries

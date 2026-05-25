@@ -1,12 +1,15 @@
-import {  t } from 'intlayer'
-import type {Dictionary} from 'intlayer';
+import { t } from 'intlayer'
+import type { Dictionary } from 'intlayer'
 
 const videoEventsTimelineContent = {
   key: 'videoTimeline',
   content: {
     addEvent: t({ en: '+ Add Event', ja: '+ イベントを追加' }),
     savingEvents: t({ en: 'Saving Events', ja: 'イベントを保存中' }),
-    searchEventsPlaceholder: t({ en: 'Search events...', ja: 'イベントを検索...' }),
+    searchEventsPlaceholder: t({
+      en: 'Search events...',
+      ja: 'イベントを検索...',
+    }),
     track: t({ en: 'Track', ja: 'トラック' }),
     events: t({ en: 'Events', ja: 'イベント' }),
     rightClickToDelete: t({

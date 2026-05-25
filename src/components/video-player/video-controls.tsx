@@ -115,8 +115,12 @@ export const VideoControls: React.FC<VideoControlsProps> = ({
                 onClick={onToggleMute}
                 size="icon-sm"
                 variant="outline"
-                title={String(isMuted || volume === 0 ? content.unmute : content.mute)}
-                aria-label={String(isMuted || volume === 0 ? content.unmute : content.mute)}
+                title={String(
+                  isMuted || volume === 0 ? content.unmute : content.mute,
+                )}
+                aria-label={String(
+                  isMuted || volume === 0 ? content.unmute : content.mute,
+                )}
                 className="shrink-0"
               >
                 {isMuted || volume === 0 ? <VolumeOffIcon /> : <Volume2Icon />}
@@ -173,8 +177,12 @@ export const VideoControls: React.FC<VideoControlsProps> = ({
             onClick={() => void onToggleFullscreen()}
             size="icon-sm"
             variant="outline"
-            title={String(isFullscreen ? content.exitFullscreen : content.enterFullscreen)}
-            aria-label={String(isFullscreen ? content.exitFullscreen : content.enterFullscreen)}
+            title={String(
+              isFullscreen ? content.exitFullscreen : content.enterFullscreen,
+            )}
+            aria-label={String(
+              isFullscreen ? content.exitFullscreen : content.enterFullscreen,
+            )}
             className="shrink-0"
           >
             {isFullscreen ? <MinimizeIcon /> : <MaximizeIcon />}

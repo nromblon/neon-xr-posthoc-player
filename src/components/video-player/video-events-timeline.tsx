@@ -235,7 +235,10 @@ export const VideoEventsTimeline: React.FC<VideoEventsTimelineProps> = ({
         </div>
         <InputGroup className="w-44">
           <SearchIcon className="ml-2 size-4 text-muted-foreground" />
-          <InputGroupInput placeholder={String(content.searchEventsPlaceholder)} className="text-xs" />
+          <InputGroupInput
+            placeholder={String(content.searchEventsPlaceholder)}
+            className="text-xs"
+          />
         </InputGroup>
       </div>
 

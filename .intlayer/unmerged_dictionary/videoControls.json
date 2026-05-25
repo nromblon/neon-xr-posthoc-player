@@ -1,1 +1,65 @@
-[{"key":"videoControls","content":{"play":{"nodeType":"translation","translation":{"en":"Play","ja":"再生"}},"pause":{"nodeType":"translation","translation":{"en":"Pause","ja":"一時停止"}},"stepBackward":{"nodeType":"translation","translation":{"en":"Step backward one frame","ja":"1フレーム後退"}},"stepForward":{"nodeType":"translation","translation":{"en":"Step forward one frame","ja":"1フレーム前進"}},"mute":{"nodeType":"translation","translation":{"en":"Mute","ja":"ミュート"}},"unmute":{"nodeType":"translation","translation":{"en":"Unmute","ja":"ミュート解除"}},"volume":{"nodeType":"translation","translation":{"en":"Volume","ja":"音量"}},"playbackSpeedPrefix":{"nodeType":"translation","translation":{"en":"Playback speed: ","ja":"再生速度: "}},"setPlaybackSpeedPre":{"nodeType":"translation","translation":{"en":"Set playback speed to ","ja":"再生速度を"}},"setPlaybackSpeedPost":{"nodeType":"translation","translation":{"en":"","ja":"に設定"}},"enterFullscreen":{"nodeType":"translation","translation":{"en":"Enter fullscreen","ja":"全画面表示"}},"exitFullscreen":{"nodeType":"translation","translation":{"en":"Exit fullscreen","ja":"全画面表示を終了"}},"layers":{"nodeType":"translation","translation":{"en":"Layers","ja":"レイヤー"}}},"location":"local","localId":"videoControls::local::src\\components\\video-player\\-video-controls.content.ts","filePath":"src\\components\\video-player\\-video-controls.content.ts"}]
+[
+  {
+    "key": "videoControls",
+    "content": {
+      "play": {
+        "nodeType": "translation",
+        "translation": { "en": "Play", "ja": "再生" }
+      },
+      "pause": {
+        "nodeType": "translation",
+        "translation": { "en": "Pause", "ja": "一時停止" }
+      },
+      "stepBackward": {
+        "nodeType": "translation",
+        "translation": {
+          "en": "Step backward one frame",
+          "ja": "1フレーム後退"
+        }
+      },
+      "stepForward": {
+        "nodeType": "translation",
+        "translation": { "en": "Step forward one frame", "ja": "1フレーム前進" }
+      },
+      "mute": {
+        "nodeType": "translation",
+        "translation": { "en": "Mute", "ja": "ミュート" }
+      },
+      "unmute": {
+        "nodeType": "translation",
+        "translation": { "en": "Unmute", "ja": "ミュート解除" }
+      },
+      "volume": {
+        "nodeType": "translation",
+        "translation": { "en": "Volume", "ja": "音量" }
+      },
+      "playbackSpeedPrefix": {
+        "nodeType": "translation",
+        "translation": { "en": "Playback speed: ", "ja": "再生速度: " }
+      },
+      "setPlaybackSpeedPre": {
+        "nodeType": "translation",
+        "translation": { "en": "Set playback speed to ", "ja": "再生速度を" }
+      },
+      "setPlaybackSpeedPost": {
+        "nodeType": "translation",
+        "translation": { "en": "", "ja": "に設定" }
+      },
+      "enterFullscreen": {
+        "nodeType": "translation",
+        "translation": { "en": "Enter fullscreen", "ja": "全画面表示" }
+      },
+      "exitFullscreen": {
+        "nodeType": "translation",
+        "translation": { "en": "Exit fullscreen", "ja": "全画面表示を終了" }
+      },
+      "layers": {
+        "nodeType": "translation",
+        "translation": { "en": "Layers", "ja": "レイヤー" }
+      }
+    },
+    "location": "local",
+    "localId": "videoControls::local::src\\components\\video-player\\-video-controls.content.ts",
+    "filePath": "src\\components\\video-player\\-video-controls.content.ts"
+  }
+]

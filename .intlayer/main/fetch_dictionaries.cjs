@@ -1,8 +1,5 @@
+const dictionaries = {}
+const getFetchDictionaries = () => dictionaries
 
-const dictionaries = {
-
-};
-const getFetchDictionaries = () => dictionaries;
-
-module.exports.getFetchDictionaries = getFetchDictionaries;
-module.exports = dictionaries;
+module.exports.getFetchDictionaries = getFetchDictionaries
+module.exports = dictionaries

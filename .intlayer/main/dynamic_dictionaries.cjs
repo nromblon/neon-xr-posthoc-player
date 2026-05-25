@@ -1,8 +1,5 @@
+const dictionaries = {}
+const getDynamicDictionaries = () => dictionaries
 
-const dictionaries = {
-
-};
-const getDynamicDictionaries = () => dictionaries;
-
-module.exports.getDynamicDictionaries = getDynamicDictionaries;
-module.exports = dictionaries;
+module.exports.getDynamicDictionaries = getDynamicDictionaries
+module.exports = dictionaries

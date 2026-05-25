@@ -1,5 +1,5 @@
-import {  t } from 'intlayer'
-import type {Dictionary} from 'intlayer';
+import { t } from 'intlayer'
+import type { Dictionary } from 'intlayer'
 
 const videoplayerContent = {
   key: 'videoplayer',
