@@ -1,5 +1,4 @@
 import { Globe } from 'lucide-react'
-import type { Locale } from 'intlayer'
 import { useLocale } from 'react-intlayer'
 import {
   Select,
@@ -8,6 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from './ui/select'
+import type { Locale } from 'intlayer'
 
 export function LanguageSwitcher() {
   const { locale, setLocale } = useLocale()
