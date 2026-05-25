@@ -99,6 +99,79 @@ const appContent = {
       ja: 'エクスポートでは、現在の視線タイミング、オフセット、視線プロジェクター設定、および視線スタイルが使用されます。',
     }),
 
+    // Toast notifications — titles
+    toastSelectionError: t({ en: 'Selection Error', ja: '選択エラー' }),
+    toastAdjustmentsLoaded: t({
+      en: 'Adjustments Loaded',
+      ja: '調整を読み込みました',
+    }),
+    toastAdjustmentsLoadFailed: t({
+      en: 'Adjustments Load Failed',
+      ja: '調整の読み込みに失敗しました',
+    }),
+    toastConfigSaved: t({ en: 'Config Saved', ja: '設定を保存しました' }),
+    toastConfigReset: t({ en: 'Config Reset', ja: '設定をリセットしました' }),
+    toastConfigResetFailed: t({
+      en: 'Config Reset Failed',
+      ja: '設定のリセットに失敗しました',
+    }),
+    toastAdjustmentsSaved: t({
+      en: 'Adjustments Saved',
+      ja: '調整を保存しました',
+    }),
+    toastSaveFailed: t({ en: 'Save Failed', ja: '保存に失敗しました' }),
+
+    // Toast notifications — descriptions
+    toastGazeFileNotFound: t({
+      en: "Unable to find valid gaze data file. Please select a folder containing 'gaze.csv'.",
+      ja: "有効な視線データファイルが見つかりません。'gaze.csv' を含むフォルダーを選択してください。",
+    }),
+    toastAutoSelectFailed: t({
+      en: "Unable to auto-select files. Expected a top-level 'scene*' video, a 'data*' folder, and either 'config_modified.json' or 'config.json'.",
+      ja: "ファイルの自動選択に失敗しました。最上位に 'scene*' 映像、'data*' フォルダー、'config_modified.json' または 'config.json' が必要です。",
+    }),
+    toastDataFolderMissingGazePre: t({ en: "Found '", ja: '「' }),
+    toastDataFolderMissingGazeSuf: t({
+      en: "' but it does not contain 'gaze.csv'.",
+      ja: "」に 'gaze.csv' が見つかりません。",
+    }),
+    toastAdjustmentsLoadedFromFolder: t({
+      en: 'Loaded adjustments-config.json from the recording folder.',
+      ja: '録音フォルダーから adjustments-config.json を読み込みました。',
+    }),
+    toastAdjustmentsLoadFailedFromFolder: t({
+      en: 'Unable to parse adjustments-config.json from the recording folder.',
+      ja: '録音フォルダーの adjustments-config.json を解析できませんでした。',
+    }),
+    toastConfigSavedDesc: t({
+      en: 'Saved the updated offsets to config_modified.json.',
+      ja: '更新されたオフセットを config_modified.json に保存しました。',
+    }),
+    toastConfigResetDesc: t({
+      en: 'Reset offsets to values from config.json.',
+      ja: 'config.json の値にオフセットをリセットしました。',
+    }),
+    toastConfigResetFailedDesc: t({
+      en: 'Unable to parse config.json to reset offsets.',
+      ja: 'config.json を解析してオフセットをリセットできませんでした。',
+    }),
+    toastAdjustmentsLoadedDesc: t({
+      en: 'Loaded adjustments-config.json.',
+      ja: 'adjustments-config.json を読み込みました。',
+    }),
+    toastAdjustmentsLoadFailedDesc: t({
+      en: 'Unable to parse adjustments-config.json.',
+      ja: 'adjustments-config.json を解析できませんでした。',
+    }),
+    toastAdjustmentsSavedDesc: t({
+      en: 'Saved the adjustments to adjustments-config.json.',
+      ja: '調整を adjustments-config.json に保存しました。',
+    }),
+    toastSaveFailedDesc: t({
+      en: 'Unable to save adjustments-config.json.',
+      ja: 'adjustments-config.json を保存できませんでした。',
+    }),
+
     // Gaze Visualizer Style
     gazeVisualizerStyle: t({
       en: 'Gaze Visualizer Style',

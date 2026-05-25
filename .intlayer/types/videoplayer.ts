@@ -1,3 +1,4 @@
+ 
 export default {
   key: 'videoplayer',
   content: {

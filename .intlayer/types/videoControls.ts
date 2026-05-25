@@ -1,3 +1,4 @@
+ 
 export default {
   key: 'videoControls',
   content: {

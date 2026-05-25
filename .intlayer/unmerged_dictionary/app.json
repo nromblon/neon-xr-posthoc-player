@@ -188,6 +188,135 @@
           "ja": "エクスポートでは、現在の視線タイミング、オフセット、視線プロジェクター設定、および視線スタイルが使用されます。"
         }
       },
+      "toastSelectionError": {
+        "nodeType": "translation",
+        "translation": { "en": "Selection Error", "ja": "選択エラー" }
+      },
+      "toastAdjustmentsLoaded": {
+        "nodeType": "translation",
+        "translation": {
+          "en": "Adjustments Loaded",
+          "ja": "調整を読み込みました"
+        }
+      },
+      "toastAdjustmentsLoadFailed": {
+        "nodeType": "translation",
+        "translation": {
+          "en": "Adjustments Load Failed",
+          "ja": "調整の読み込みに失敗しました"
+        }
+      },
+      "toastConfigSaved": {
+        "nodeType": "translation",
+        "translation": { "en": "Config Saved", "ja": "設定を保存しました" }
+      },
+      "toastConfigReset": {
+        "nodeType": "translation",
+        "translation": { "en": "Config Reset", "ja": "設定をリセットしました" }
+      },
+      "toastConfigResetFailed": {
+        "nodeType": "translation",
+        "translation": {
+          "en": "Config Reset Failed",
+          "ja": "設定のリセットに失敗しました"
+        }
+      },
+      "toastAdjustmentsSaved": {
+        "nodeType": "translation",
+        "translation": { "en": "Adjustments Saved", "ja": "調整を保存しました" }
+      },
+      "toastSaveFailed": {
+        "nodeType": "translation",
+        "translation": { "en": "Save Failed", "ja": "保存に失敗しました" }
+      },
+      "toastGazeFileNotFound": {
+        "nodeType": "translation",
+        "translation": {
+          "en": "Unable to find valid gaze data file. Please select a folder containing 'gaze.csv'.",
+          "ja": "有効な視線データファイルが見つかりません。'gaze.csv' を含むフォルダーを選択してください。"
+        }
+      },
+      "toastAutoSelectFailed": {
+        "nodeType": "translation",
+        "translation": {
+          "en": "Unable to auto-select files. Expected a top-level 'scene*' video, a 'data*' folder, and either 'config_modified.json' or 'config.json'.",
+          "ja": "ファイルの自動選択に失敗しました。最上位に 'scene*' 映像、'data*' フォルダー、'config_modified.json' または 'config.json' が必要です。"
+        }
+      },
+      "toastDataFolderMissingGazePre": {
+        "nodeType": "translation",
+        "translation": { "en": "Found '", "ja": "「" }
+      },
+      "toastDataFolderMissingGazeSuf": {
+        "nodeType": "translation",
+        "translation": {
+          "en": "' but it does not contain 'gaze.csv'.",
+          "ja": "」に 'gaze.csv' が見つかりません。"
+        }
+      },
+      "toastAdjustmentsLoadedFromFolder": {
+        "nodeType": "translation",
+        "translation": {
+          "en": "Loaded adjustments-config.json from the recording folder.",
+          "ja": "録音フォルダーから adjustments-config.json を読み込みました。"
+        }
+      },
+      "toastAdjustmentsLoadFailedFromFolder": {
+        "nodeType": "translation",
+        "translation": {
+          "en": "Unable to parse adjustments-config.json from the recording folder.",
+          "ja": "録音フォルダーの adjustments-config.json を解析できませんでした。"
+        }
+      },
+      "toastConfigSavedDesc": {
+        "nodeType": "translation",
+        "translation": {
+          "en": "Saved the updated offsets to config_modified.json.",
+          "ja": "更新されたオフセットを config_modified.json に保存しました。"
+        }
+      },
+      "toastConfigResetDesc": {
+        "nodeType": "translation",
+        "translation": {
+          "en": "Reset offsets to values from config.json.",
+          "ja": "config.json の値にオフセットをリセットしました。"
+        }
+      },
+      "toastConfigResetFailedDesc": {
+        "nodeType": "translation",
+        "translation": {
+          "en": "Unable to parse config.json to reset offsets.",
+          "ja": "config.json を解析してオフセットをリセットできませんでした。"
+        }
+      },
+      "toastAdjustmentsLoadedDesc": {
+        "nodeType": "translation",
+        "translation": {
+          "en": "Loaded adjustments-config.json.",
+          "ja": "adjustments-config.json を読み込みました。"
+        }
+      },
+      "toastAdjustmentsLoadFailedDesc": {
+        "nodeType": "translation",
+        "translation": {
+          "en": "Unable to parse adjustments-config.json.",
+          "ja": "adjustments-config.json を解析できませんでした。"
+        }
+      },
+      "toastAdjustmentsSavedDesc": {
+        "nodeType": "translation",
+        "translation": {
+          "en": "Saved the adjustments to adjustments-config.json.",
+          "ja": "調整を adjustments-config.json に保存しました。"
+        }
+      },
+      "toastSaveFailedDesc": {
+        "nodeType": "translation",
+        "translation": {
+          "en": "Unable to save adjustments-config.json.",
+          "ja": "adjustments-config.json を保存できませんでした。"
+        }
+      },
       "gazeVisualizerStyle": {
         "nodeType": "translation",
         "translation": {

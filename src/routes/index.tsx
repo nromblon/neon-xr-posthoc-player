@@ -212,7 +212,7 @@ function App() {
   }
 
   const showSelectionError = (message: string) => {
-    toast.error('Selection Error', {
+    toast.error(content.toastSelectionError, {
       description: message,
     })
   }
@@ -267,9 +267,7 @@ function App() {
     if (!gf || files.length === 0) {
       setGazeFile(null)
       setEventsFile(null)
-      showSelectionError(
-        "Unable to find valid gaze data file. Please select a folder containing 'gaze.csv'.",
-      )
+      showSelectionError(String(content.toastGazeFileNotFound))
       resetDataFolderPicker()
     }
   }
@@ -295,9 +293,7 @@ function App() {
     setRecordingDirectoryHandle(directoryHandle ?? null)
 
     if (!sceneEntry || !configEntry || !dataFolderName) {
-      showSelectionError(
-        "Unable to auto-select files. Expected a top-level 'scene*' video, a 'data*' folder, and either 'config_modified.json' or 'config.json'.",
-      )
+      showSelectionError(String(content.toastAutoSelectFailed))
       setPackagePickerKey((k) => k + 1)
       if (packagePickerRef.current) {
         packagePickerRef.current.value = ''
@@ -321,7 +317,7 @@ function App() {
 
     if (!nextGazeFile) {
       showSelectionError(
-        `Found '${dataFolderName}' but it does not contain 'gaze.csv'.`,
+        `${String(content.toastDataFolderMissingGazePre)}${dataFolderName}${String(content.toastDataFolderMissingGazeSuf)}`,
       )
       return
     }
@@ -341,15 +337,13 @@ function App() {
       try {
         const adjustments = await readAdjustmentsConfig(adjustmentsEntry.file)
         applyAdjustmentsConfig(adjustments)
-        toast.success('Adjustments Loaded', {
-          description:
-            'Loaded adjustments-config.json from the recording folder.',
+        toast.success(content.toastAdjustmentsLoaded, {
+          description: content.toastAdjustmentsLoadedFromFolder,
         })
       } catch (error) {
         console.error('Failed to parse adjustments-config.json:', error)
-        toast.error('Adjustments Load Failed', {
-          description:
-            'Unable to parse adjustments-config.json from the recording folder.',
+        toast.error(content.toastAdjustmentsLoadFailed, {
+          description: content.toastAdjustmentsLoadFailedFromFolder,
         })
       }
     }
@@ -491,8 +485,8 @@ function App() {
       )
       setConfigFile(modifiedConfigFile)
       setInputFiles(configInputRef.current, [modifiedConfigFile])
-      toast.success('Config Saved', {
-        description: 'Saved the updated offsets to config_modified.json.',
+      toast.success(content.toastConfigSaved, {
+        description: content.toastConfigSavedDesc,
       })
     } catch (error) {
       console.error('Failed to save config_modified.json:', error)
@@ -506,13 +500,13 @@ function App() {
     try {
       const offsets = await readConfigOffsets(configFile)
       setSensorOffsets(offsets)
-      toast.success('Config Reset', {
-        description: 'Reset offsets to values from config.json.',
+      toast.success(content.toastConfigReset, {
+        description: content.toastConfigResetDesc,
       })
     } catch (error) {
       console.error('Failed to parse config.json offsets:', error)
-      toast.error('Config Reset Failed', {
-        description: 'Unable to parse config.json to reset offsets.',
+      toast.error(content.toastConfigResetFailed, {
+        description: content.toastConfigResetFailedDesc,
       })
     }
   }
@@ -559,13 +553,13 @@ function App() {
       applyAdjustmentsConfig(adjustments)
       setAdjustmentsConfigFile(file)
       setInputFiles(adjustmentsInputRef.current, [file])
-      toast.success('Adjustments Loaded', {
-        description: 'Loaded adjustments-config.json.',
+      toast.success(content.toastAdjustmentsLoaded, {
+        description: content.toastAdjustmentsLoadedDesc,
       })
     } catch (error) {
       console.error('Failed to parse adjustments-config.json:', error)
-      toast.error('Adjustments Load Failed', {
-        description: 'Unable to parse adjustments-config.json.',
+      toast.error(content.toastAdjustmentsLoadFailed, {
+        description: content.toastAdjustmentsLoadFailedDesc,
       })
       if (adjustmentsInputRef.current) {
         adjustmentsInputRef.current.value = ''
@@ -590,13 +584,13 @@ function App() {
         adjustmentsConfig,
         recordingDirectoryHandle,
       )
-      toast.success('Adjustments Saved', {
-        description: 'Saved the adjustments to adjustments-config.json.',
+      toast.success(content.toastAdjustmentsSaved, {
+        description: content.toastAdjustmentsSavedDesc,
       })
     } catch (error) {
       console.error('Failed to save adjustments-config.json:', error)
-      toast.error('Save Failed', {
-        description: 'Unable to save adjustments-config.json.',
+      toast.error(content.toastSaveFailed, {
+        description: content.toastSaveFailedDesc,
       })
     }
   }
