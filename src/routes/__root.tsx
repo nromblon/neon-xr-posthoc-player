@@ -10,6 +10,8 @@ import TanStackQueryDevtools from '../integrations/tanstack-query/devtools'
 import appCss from '../styles.css?url'
 import type { QueryClient } from '@tanstack/react-query'
 import { Toaster } from '@/components/ui/sonner'
+import { IntlayerProvider } from 'react-intlayer'
+import { LanguageSwitcher } from '@/components/LanguageSwitcher'
 
 interface MyRouterContext {
   queryClient: QueryClient
@@ -47,20 +49,23 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        {children}
-        <Toaster position="bottom-right" richColors={true} />
-        <TanStackDevtools
-          config={{
-            position: 'bottom-right',
-          }}
-          plugins={[
-            {
-              name: 'Tanstack Router',
-              render: <TanStackRouterDevtoolsPanel />,
-            },
-            TanStackQueryDevtools,
-          ]}
-        />
+        <IntlayerProvider>
+          <LanguageSwitcher />
+          {children}
+          <Toaster position="bottom-right" richColors={true} />
+          <TanStackDevtools
+            config={{
+              position: 'bottom-right',
+            }}
+            plugins={[
+              {
+                name: 'Tanstack Router',
+                render: <TanStackRouterDevtoolsPanel />,
+              },
+              TanStackQueryDevtools,
+            ]}
+          />
+        </IntlayerProvider>
         <Scripts />
       </body>
     </html>
