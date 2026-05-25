@@ -782,7 +782,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     }
 
     const exportVideo = document.createElement('video')
-    exportVideo.muted = true
+    exportVideo.volume = 0
     const exportVideoSource = resolveExportVideoSource(liveVideo, videoFile)
     let exportFileHandle: FileSystemFileHandle | null = null
     const fps =
