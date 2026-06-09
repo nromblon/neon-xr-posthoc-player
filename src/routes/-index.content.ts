@@ -40,6 +40,16 @@ const appContent = {
       en: 'Neon XR Calibration File (config.json)',
       ja: 'Neon XR キャリブレーションファイル (config.json)',
     }),
+    recordingMode: t({ en: 'Recording Mode', ja: '録画モード' }),
+    calibratedIntrinsicsLoaded: t({
+      en: 'Calibrated intrinsics loaded',
+      ja: 'キャリブレーション済み内部パラメーター読み込み済み',
+    }),
+    usingFovEstimate: t({
+      en: 'Using FOV estimate',
+      ja: 'FOV 推定値を使用中',
+    }),
+    meanError: t({ en: 'mean error', ja: '平均誤差' }),
     horizontalFov: t({ en: 'Horizontal FOV', ja: '水平視野角' }),
     fovSliderHint: t({
       en: 'Lower if there is centre pull',

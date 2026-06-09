@@ -27,6 +27,17 @@ import {
 } from '@/components/ui/shadcn-io/color-picker'
 import { SliderNumberInput } from '@/components/ui/slider-number-input'
 import VideoPlayer from '@/components/Videoplayer'
+import { Badge } from '@/components/ui/badge'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import type { RecordingMode } from '@/lib/frustum-calibration'
+import { loadFrustumCalibration } from '@/lib/frustum-calibration'
+import type { CameraIntrinsics } from '@/lib/gaze-projection'
 import {
   Empty,
   EmptyDescription,
@@ -107,6 +118,10 @@ function App() {
   const [configFile, setConfigFile] = React.useState<File | null>(null)
   // Horizontal FOV for projection calculations
   const [fovHorizontalDeg, setFovHorizontalDeg] = React.useState(82)
+  // Recording mode and calibrated intrinsics
+  const [recordingMode, setRecordingMode] = React.useState<RecordingMode>('LeftEye')
+  const [calibratedIntrinsics, setCalibratedIntrinsics] =
+    React.useState<CameraIntrinsics | null>(null)
   const [exportGazeVideo, setExportGazeVideo] = React.useState<
     (() => Promise<void>) | null
   >(null)
@@ -658,6 +673,15 @@ function App() {
     }
   }, [exportGazeVideo, videoExportState.errorMessage, videoExportState.status])
 
+  React.useEffect(() => {
+    const saved = loadFrustumCalibration(recordingMode)
+    if (saved && videoFile) {
+      setCalibratedIntrinsics(saved.intrinsics)
+    } else {
+      setCalibratedIntrinsics(null)
+    }
+  }, [recordingMode, videoFile])
+
   return (
     <div className="flex justify-between items-start my-4">
       <div
@@ -676,6 +700,7 @@ function App() {
             gazeOffset2d={gazeOffset2d}
             circleConfig={{ stroke, radius, color }}
             isSavingEvents={isSavingEvents}
+            calibratedIntrinsics={calibratedIntrinsics ?? undefined}
             onFrameDurationChange={(frameDurationSeconds) => {
               if (frameDurationSeconds > 0) {
                 setFrameDurationMs(frameDurationSeconds * 1000)
@@ -794,6 +819,37 @@ function App() {
                 id="projector-settings"
                 className="flex flex-col gap-2 p-4 border-2 border-accent rounded-md"
               >
+                <Label className={'text-xs'} htmlFor="recording-mode-select">
+                  {content.recordingMode}
+                </Label>
+                <Select
+                  value={recordingMode}
+                  onValueChange={(v) => setRecordingMode(v as RecordingMode)}
+                >
+                  <SelectTrigger id="recording-mode-select" className="h-8 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="LeftEye">Left Eye</SelectItem>
+                    <SelectItem value="RightEye">Right Eye</SelectItem>
+                    <SelectItem value="Binocular">Binocular</SelectItem>
+                  </SelectContent>
+                </Select>
+                {calibratedIntrinsics ? (
+                  <Badge variant="secondary" className="text-xs w-fit text-green-700 dark:text-green-400">
+                    {content.calibratedIntrinsicsLoaded}{' '}
+                    {(() => {
+                      const saved = loadFrustumCalibration(recordingMode)
+                      return saved
+                        ? `(${String(content.meanError)}: ${saved.meanReprojectionError.toFixed(1)} px)`
+                        : ''
+                    })()}
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="text-xs w-fit text-muted-foreground">
+                    {content.usingFovEstimate}
+                  </Badge>
+                )}
                 <Label className={'text-xs'} htmlFor="calibration-file-upload">
                   {content.calibrationFile}
                 </Label>

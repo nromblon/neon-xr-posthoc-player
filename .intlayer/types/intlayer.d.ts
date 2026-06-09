@@ -3,6 +3,7 @@ import _17ih1iu3n43 from './app.ts';
 import _22p7qwdjag3 from './videoControls.ts';
 import _rmz3fyk4vw from './videoplayer.ts';
 import _fr3jqw0g8q from './videoTimeline.ts';
+import _calibration from './calibration.ts';
 
 declare module 'intlayer' {
   interface __DictionaryRegistry {
@@ -10,6 +11,7 @@ declare module 'intlayer' {
     "videoControls": typeof _22p7qwdjag3;
     "videoplayer": typeof _rmz3fyk4vw;
     "videoTimeline": typeof _fr3jqw0g8q;
+    "calibration": typeof _calibration;
   }
 
   interface __DeclaredLocalesRegistry {

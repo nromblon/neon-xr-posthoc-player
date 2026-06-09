@@ -190,6 +190,7 @@ function projectRayToFrame(
 export function buildProjector(
   configJson: NeonXRConfig,
   videoParams: VideoParams,
+  intrinsics?: CameraIntrinsics,
 ): Projector {
   const { videoWidth, videoHeight, fovHorizontalDeg } = videoParams
 
@@ -207,15 +208,15 @@ export function buildProjector(
   const p = configJson.sensorCalibration.offset.position
   const mountPosition = vec3.fromValues(p.x, -p.y, p.z)
 
-  const fx = videoWidth / 2 / Math.tan(toRad(fovHorizontalDeg) / 2)
-  const fy = fx
-  const cx = videoWidth / 2
-  const cy = videoHeight / 2
+  const K: CameraIntrinsics = intrinsics ?? (() => {
+    const fx = videoWidth / 2 / Math.tan(toRad(fovHorizontalDeg) / 2)
+    return { fx, fy: fx, cx: videoWidth / 2, cy: videoHeight / 2 }
+  })()
 
   return {
     mountQuat,
     mountPosition,
-    K: { fx, fy, cx, cy },
+    K,
     videoWidth,
     videoHeight,
     gazeOffsetX: videoParams.gazeOffsetX || 0,

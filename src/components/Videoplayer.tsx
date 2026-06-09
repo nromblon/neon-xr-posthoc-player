@@ -11,6 +11,7 @@ import {
   buildProjector,
   debugProjector,
   projectGazeSample,
+  type CameraIntrinsics,
 } from '@/lib/gaze-projection'
 import {
   INITIAL_VIDEO_EXPORT_STATE,
@@ -44,6 +45,7 @@ interface VideoPlayerProps {
   gazeOffset2d: GazeOffset2d
   circleConfig: CircleConfig
   isSavingEvents: boolean
+  calibratedIntrinsics?: CameraIntrinsics
   onFrameDurationChange?: (frameDurationSeconds: number) => void
   onExportReady?: (exportHandler: (() => Promise<void>) | null) => void
   onExportStateChange?: (state: VideoExportState) => void
@@ -159,6 +161,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   gazeOffset2d,
   circleConfig = defaultCircleConfig,
   isSavingEvents,
+  calibratedIntrinsics,
   onFrameDurationChange,
   onExportReady,
   onExportStateChange,
@@ -519,13 +522,17 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
             JSON.parse(text),
             sensorOffsets,
           )
-          const projector = buildProjector(config, {
-            videoWidth,
-            videoHeight,
-            fovHorizontalDeg,
-            gazeOffsetX: gazeOffset2d.x,
-            gazeOffsetY: gazeOffset2d.y,
-          })
+          const projector = buildProjector(
+            config,
+            {
+              videoWidth,
+              videoHeight,
+              fovHorizontalDeg,
+              gazeOffsetX: gazeOffset2d.x,
+              gazeOffsetY: gazeOffset2d.y,
+            },
+            calibratedIntrinsics,
+          )
 
           debugProjector(projector)
 
