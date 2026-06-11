@@ -86,6 +86,34 @@
           "ja": "Neon XR キャリブレーションファイル (config.json)"
         }
       },
+      "recordingMode": {
+        "nodeType": "translation",
+        "translation": {
+          "en": "Recording Mode",
+          "ja": "録画モード"
+        }
+      },
+      "calibratedIntrinsicsLoaded": {
+        "nodeType": "translation",
+        "translation": {
+          "en": "Calibrated intrinsics loaded",
+          "ja": "キャリブレーション済み内部パラメーター読み込み済み"
+        }
+      },
+      "usingFovEstimate": {
+        "nodeType": "translation",
+        "translation": {
+          "en": "Using FOV estimate",
+          "ja": "FOV 推定値を使用中"
+        }
+      },
+      "meanError": {
+        "nodeType": "translation",
+        "translation": {
+          "en": "mean error",
+          "ja": "平均誤差"
+        }
+      },
       "horizontalFov": {
         "nodeType": "translation",
         "translation": {

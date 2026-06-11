@@ -683,7 +683,7 @@ function App() {
   }, [recordingMode, videoFile])
 
   return (
-    <div className="flex justify-between items-start my-4">
+    <div className="flex justify-between items-start min-h-screen my-4 pt-12">
       <div
         id="video-div"
         className="flex items-center justify-center h-full flex-1"
