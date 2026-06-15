@@ -1,17 +1,17 @@
 import "intlayer";
-import _17ih1iu3n43 from './app.ts';
-import _2g3blzfexi6 from './calibration.ts';
-import _22p7qwdjag3 from './videoControls.ts';
-import _rmz3fyk4vw from './videoplayer.ts';
-import _fr3jqw0g8q from './videoTimeline.ts';
+import _29vp6up4mkh from './app.ts';
+import _1yo645ft7bu from './calibration.ts';
+import _19pa4yefg51 from './videoControls.ts';
+import _1ppbz68x8yy from './videoplayer.ts';
+import _1ub7uiqe2k9 from './videoTimeline.ts';
 
 declare module 'intlayer' {
   interface __DictionaryRegistry {
-    "app": typeof _17ih1iu3n43;
-    "calibration": typeof _2g3blzfexi6;
-    "videoControls": typeof _22p7qwdjag3;
-    "videoplayer": typeof _rmz3fyk4vw;
-    "videoTimeline": typeof _fr3jqw0g8q;
+    "app": typeof _29vp6up4mkh;
+    "calibration": typeof _1yo645ft7bu;
+    "videoControls": typeof _19pa4yefg51;
+    "videoplayer": typeof _1ppbz68x8yy;
+    "videoTimeline": typeof _1ub7uiqe2k9;
   }
 
   interface __DeclaredLocalesRegistry {

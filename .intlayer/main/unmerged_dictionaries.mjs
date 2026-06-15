@@ -1,15 +1,15 @@
-import _tr6q8o3et2 from '../unmerged_dictionary/app.json' with { type: 'json' };
-import _1bxvceqlebw from '../unmerged_dictionary/calibration.json' with { type: 'json' };
-import _p13g9v6stl from '../unmerged_dictionary/videoControls.json' with { type: 'json' };
-import _1muo4gi8b4 from '../unmerged_dictionary/videoplayer.json' with { type: 'json' };
-import _1m22jtijd25 from '../unmerged_dictionary/videoTimeline.json' with { type: 'json' };
+import _2c1o2ssirqm from '../unmerged_dictionary/app.json' with { type: 'json' };
+import _19u2gzj0kx6 from '../unmerged_dictionary/calibration.json' with { type: 'json' };
+import _19o4svpmmve from '../unmerged_dictionary/videoControls.json' with { type: 'json' };
+import _t0buyc0gfr from '../unmerged_dictionary/videoplayer.json' with { type: 'json' };
+import _qbhx9kn2bz from '../unmerged_dictionary/videoTimeline.json' with { type: 'json' };
 
 const dictionaries = {
-  "app": _tr6q8o3et2,
-  "calibration": _1bxvceqlebw,
-  "videoControls": _p13g9v6stl,
-  "videoplayer": _1muo4gi8b4,
-  "videoTimeline": _1m22jtijd25
+  "app": _2c1o2ssirqm,
+  "calibration": _19u2gzj0kx6,
+  "videoControls": _19o4svpmmve,
+  "videoplayer": _t0buyc0gfr,
+  "videoTimeline": _qbhx9kn2bz
 };
 const getUnmergedDictionaries = () => dictionaries;
 

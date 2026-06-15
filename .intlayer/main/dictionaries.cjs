@@ -1,15 +1,15 @@
-const _9xqy9922zn = require('../dictionary/app.json');
-const _jgeukscl15 = require('../dictionary/calibration.json');
-const _1n3yln3pejh = require('../dictionary/videoControls.json');
-const _2aw5bqhxdxj = require('../dictionary/videoplayer.json');
-const _1sxdu1mpek7 = require('../dictionary/videoTimeline.json');
+const _24a84e6f5ju = require('../dictionary/app.json');
+const _233tas4j1ct = require('../dictionary/calibration.json');
+const _btdbnhd6jq = require('../dictionary/videoControls.json');
+const _1ge5pfv9xw3 = require('../dictionary/videoplayer.json');
+const _gqyg42s5b4 = require('../dictionary/videoTimeline.json');
 
 const dictionaries = {
-  "app": _9xqy9922zn,
-  "calibration": _jgeukscl15,
-  "videoControls": _1n3yln3pejh,
-  "videoplayer": _2aw5bqhxdxj,
-  "videoTimeline": _1sxdu1mpek7
+  "app": _24a84e6f5ju,
+  "calibration": _233tas4j1ct,
+  "videoControls": _btdbnhd6jq,
+  "videoplayer": _1ge5pfv9xw3,
+  "videoTimeline": _gqyg42s5b4
 };
 const getDictionaries = () => dictionaries;
 
