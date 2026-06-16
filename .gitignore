@@ -11,6 +11,7 @@ count.txt
 .output
 .vinxi
 .intlayer
+src/routeTree.gen.ts
 
 todos.json
 Sample Data
