@@ -1,10 +1,12 @@
 const _9xqy9922zn = require('../dictionary/app.json');
+const _jgeukscl15 = require('../dictionary/calibration.json');
 const _1n3yln3pejh = require('../dictionary/videoControls.json');
 const _2aw5bqhxdxj = require('../dictionary/videoplayer.json');
 const _1sxdu1mpek7 = require('../dictionary/videoTimeline.json');
 
 const dictionaries = {
   "app": _9xqy9922zn,
+  "calibration": _jgeukscl15,
   "videoControls": _1n3yln3pejh,
   "videoplayer": _2aw5bqhxdxj,
   "videoTimeline": _1sxdu1mpek7

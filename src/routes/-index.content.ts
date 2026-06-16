@@ -37,9 +37,23 @@ const appContent = {
       ja: 'config_modified.jsonに保存',
     }),
     calibrationFile: t({
-      en: 'Neon XR Calibration File (config.json)',
-      ja: 'Neon XR キャリブレーションファイル (config.json)',
+      en: 'Sensor Offset Calibration File (config.json)',
+      ja: 'センサー オフセット キャリブレーションファイル (config.json)',
     }),
+    recordingMode: t({ en: 'Recording Mode', ja: '録画モード' }),
+    uploadFrustumCalibrationTitle: t({
+      en: 'Upload Recording Frustum Calibration Intrinsics',
+      ja: '録画視錐台キャリブレーション内部パラメーターをアップロード',
+    }),
+    calibratedIntrinsicsLoaded: t({
+      en: 'intrinsics loaded',
+      ja: '内部パラメーターを読み込みました',
+    }),
+    usingFovEstimate: t({
+      en: 'Using FOV estimate',
+      ja: 'FOV 推定値を使用中',
+    }),
+    meanError: t({ en: 'mean error', ja: '平均誤差' }),
     horizontalFov: t({ en: 'Horizontal FOV', ja: '水平視野角' }),
     fovSliderHint: t({
       en: 'Lower if there is centre pull',
@@ -120,6 +134,18 @@ const appContent = {
       ja: '調整を保存しました',
     }),
     toastSaveFailed: t({ en: 'Save Failed', ja: '保存に失敗しました' }),
+    toastFrustumLoaded: t({
+      en: 'Frustum Calibration Loaded',
+      ja: '視錐台キャリブレーションを読み込みました',
+    }),
+    toastFrustumLoadedDesc: t({
+      en: 'Added the uploaded calibration as a recording mode option.',
+      ja: 'アップロードしたキャリブレーションを録画モードの選択肢に追加しました。',
+    }),
+    toastFrustumLoadFailed: t({
+      en: 'Frustum Calibration Load Failed',
+      ja: '視錐台キャリブレーションの読み込みに失敗しました',
+    }),
 
     // Toast notifications — descriptions
     toastGazeFileNotFound: t({
