@@ -1,25 +1,28 @@
 import React, { useEffect, useReducer, useRef } from 'react'
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { Link, createFileRoute } from '@tanstack/react-router'
 import { useIntlayer } from 'react-intlayer'
 import { toast } from 'sonner'
 import { CheckCircle2Icon, CircleDashedIcon, CircleDotIcon } from 'lucide-react'
+import type {CalibrationMarker, CalibrationSession, FrustumCalibrationResult, MarkerMeasurement, ReprojectionRow} from '@/lib/frustum-calibration';
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import {
-  type CalibrationMarker,
-  type CalibrationSession,
-  type FrustumCalibrationResult,
-  type MarkerMeasurement,
-  type ReprojectionRow,
   CalibrationError,
+  
+  
+  
+  
+  
   parseFrustumCalibrationSession,
   saveFrustumCalibrationFile,
-  solveFrustumCalibration,
+  solveFrustumCalibration
 } from '@/lib/frustum-calibration'
 
-export const Route = createFileRoute('/calibration')({ component: CalibrationPage })
+export const Route = createFileRoute('/calibration')({
+  component: CalibrationPage,
+})
 
 // ---------------------------------------------------------------------------
 // State machine
@@ -43,7 +46,7 @@ interface CalibState {
   measurements: Map<number, { u: number; v: number }>
   activeMarkerId: number | null
   result: FrustumCalibrationResult | null
-  reprojectionRows: ReprojectionRow[] | null
+  reprojectionRows: Array<ReprojectionRow> | null
 }
 
 type CalibAction =
@@ -60,7 +63,7 @@ type CalibAction =
   | {
       type: 'SOLVE'
       result: FrustumCalibrationResult
-      rows: ReprojectionRow[]
+      rows: Array<ReprojectionRow>
     }
   | { type: 'SAVE' }
   | { type: 'RESET' }
@@ -78,7 +81,7 @@ const initialState: CalibState = {
 }
 
 function allMeasured(
-  markers: CalibrationMarker[],
+  markers: Array<CalibrationMarker>,
   measurements: Map<number, { u: number; v: number }>,
 ): boolean {
   return markers.every((m) => measurements.has(m.id))
@@ -114,18 +117,22 @@ function reducer(state: CalibState, action: CalibAction): CalibState {
       return {
         ...state,
         activeMarkerId: action.id,
-        phase: state.phase === 'solved' || state.phase === 'saved' ? 'measuring' : state.phase === 'videoLoaded' ? 'measuring' : state.phase,
+        phase:
+          state.phase === 'solved' || state.phase === 'saved'
+            ? 'measuring'
+            : state.phase === 'videoLoaded'
+              ? 'measuring'
+              : state.phase,
       }
     case 'RECORD_MEASUREMENT': {
       const next = new Map(state.measurements)
       next.set(action.id, { u: action.u, v: action.v })
-      const nextActive =
-        state.session
-          ? (() => {
-              const unmet = state.session.markers.find((m) => !next.has(m.id))
-              return unmet ? unmet.id : null
-            })()
-          : null
+      const nextActive = state.session
+        ? (() => {
+            const unmet = state.session.markers.find((m) => !next.has(m.id))
+            return unmet ? unmet.id : null
+          })()
+        : null
       const phase =
         state.session && allMeasured(state.session.markers, next)
           ? 'allMeasured'
@@ -172,9 +179,9 @@ function reducer(state: CalibState, action: CalibAction): CalibState {
 function drawOverlay(
   canvas: HTMLCanvasElement,
   measurements: Map<number, { u: number; v: number }>,
-  markers: CalibrationMarker[],
+  markers: Array<CalibrationMarker>,
   activeMarkerId: number | null,
-  reprojectionRows: ReprojectionRow[] | null,
+  reprojectionRows: Array<ReprojectionRow> | null,
   nativeWidth: number,
   nativeHeight: number,
 ) {
@@ -191,7 +198,10 @@ function drawOverlay(
     if (!m) continue
     ctx.beginPath()
     ctx.arc(m.u, m.v, R, 0, Math.PI * 2)
-    ctx.fillStyle = marker.id === activeMarkerId ? 'rgba(255,200,0,0.85)' : 'rgba(220,50,50,0.85)'
+    ctx.fillStyle =
+      marker.id === activeMarkerId
+        ? 'rgba(255,200,0,0.85)'
+        : 'rgba(220,50,50,0.85)'
     ctx.fill()
     ctx.font = font
     ctx.fillStyle = '#fff'
@@ -296,11 +306,14 @@ function CalibrationPage() {
     const reader = new FileReader()
     reader.onload = (e) => {
       try {
-        const session = parseFrustumCalibrationSession(e.target?.result as string)
+        const session = parseFrustumCalibrationSession(
+          e.target?.result as string,
+        )
         dispatch({ type: 'LOAD_SESSION', session })
       } catch (err) {
         toast.error(String(content.toastSessionError), {
-          description: err instanceof CalibrationError ? err.message : String(err),
+          description:
+            err instanceof CalibrationError ? err.message : String(err),
         })
       }
     }
@@ -335,7 +348,7 @@ function CalibrationPage() {
   const handleSolve = () => {
     if (!state.session) return
     try {
-      const measurements: MarkerMeasurement[] = state.session.markers
+      const measurements: Array<MarkerMeasurement> = state.session.markers
         .filter((m) => state.measurements.has(m.id))
         .map((m) => {
           const px = state.measurements.get(m.id)!
@@ -360,7 +373,8 @@ function CalibrationPage() {
       }
     } catch (err) {
       toast.error(String(content.toastSolveError), {
-        description: err instanceof CalibrationError ? err.message : String(err),
+        description:
+          err instanceof CalibrationError ? err.message : String(err),
       })
     }
   }
@@ -403,10 +417,19 @@ function CalibrationPage() {
 
   const qualityBadge = state.result
     ? state.result.meanReprojectionError < 2
-      ? { label: String(content.qualityExcellent), className: 'bg-green-600 text-white' }
+      ? {
+          label: String(content.qualityExcellent),
+          className: 'bg-green-600 text-white',
+        }
       : state.result.meanReprojectionError < 5
-        ? { label: String(content.qualityUsable), className: 'bg-yellow-500 text-white' }
-        : { label: String(content.qualityRedo), className: 'bg-red-600 text-white' }
+        ? {
+            label: String(content.qualityUsable),
+            className: 'bg-yellow-500 text-white',
+          }
+        : {
+            label: String(content.qualityRedo),
+            className: 'bg-red-600 text-white',
+          }
     : null
 
   const sortedRows = state.reprojectionRows
@@ -424,7 +447,10 @@ function CalibrationPage() {
     <div className="flex flex-col h-screen p-4 gap-4">
       {/* Header */}
       <div className="flex items-center gap-4 shrink-0">
-        <Link to="/" className="text-sm text-muted-foreground hover:text-foreground">
+        <Link
+          to="/"
+          className="text-sm text-muted-foreground hover:text-foreground"
+        >
           {String(content.backToPlayer)}
         </Link>
         <h1 className="text-xl font-bold">{String(content.pageTitle)}</h1>
@@ -450,15 +476,19 @@ function CalibrationPage() {
                 ref={canvasRef}
                 className="absolute inset-0 w-full h-full"
                 style={{
-                  cursor: state.activeMarkerId !== null ? 'crosshair' : 'default',
-                  pointerEvents: state.activeMarkerId !== null ? 'auto' : 'none',
+                  cursor:
+                    state.activeMarkerId !== null ? 'crosshair' : 'default',
+                  pointerEvents:
+                    state.activeMarkerId !== null ? 'auto' : 'none',
                 }}
                 onClick={handleCanvasClick}
               />
             </div>
           ) : (
             <div className="flex items-center justify-center border-2 border-dashed rounded-lg aspect-video text-muted-foreground text-sm">
-              {state.session ? String(content.uploadVideoHint) : String(content.uploadSessionHint)}
+              {state.session
+                ? String(content.uploadVideoHint)
+                : String(content.uploadSessionHint)}
             </div>
           )}
         </div>
@@ -467,7 +497,9 @@ function CalibrationPage() {
         <div className="w-80 flex flex-col gap-4 shrink-0 h-full overflow-y-auto">
           {/* Session upload */}
           <div className="flex flex-col gap-2 p-4 border rounded-lg">
-            <Label className="text-sm font-medium">{String(content.uploadSession)}</Label>
+            <Label className="text-sm font-medium">
+              {String(content.uploadSession)}
+            </Label>
             <Input
               type="file"
               accept=".json"
@@ -479,8 +511,12 @@ function CalibrationPage() {
             />
             {state.session && (
               <div className="text-xs text-muted-foreground">
-                {String(content.mode)}: <span className="font-medium">{state.session.recordingMode}</span>
-                {' · '}{state.session.markers.length} markers
+                {String(content.mode)}:{' '}
+                <span className="font-medium">
+                  {state.session.recordingMode}
+                </span>
+                {' · '}
+                {state.session.markers.length} markers
               </div>
             )}
           </div>
@@ -488,7 +524,9 @@ function CalibrationPage() {
           {/* Video upload */}
           {state.session && (
             <div className="flex flex-col gap-2 p-4 border rounded-lg">
-              <Label className="text-sm font-medium">{String(content.uploadVideo)}</Label>
+              <Label className="text-sm font-medium">
+                {String(content.uploadVideo)}
+              </Label>
               <Input
                 type="file"
                 accept="video/*"
@@ -504,7 +542,9 @@ function CalibrationPage() {
           {/* Marker list */}
           {state.session && videoShowing && (
             <div className="flex flex-col gap-1 p-4 border rounded-lg">
-              <Label className="text-sm font-medium mb-2">{String(content.markers)}</Label>
+              <Label className="text-sm font-medium mb-2">
+                {String(content.markers)}
+              </Label>
               <div className="flex flex-col gap-1 max-h-64 overflow-y-auto">
                 {state.session.markers.map((marker) => {
                   const measured = state.measurements.has(marker.id)
@@ -540,8 +580,14 @@ function CalibrationPage() {
                           className="ml-auto text-muted-foreground hover:text-foreground text-xs"
                           onClick={(e) => {
                             e.stopPropagation()
-                            dispatch({ type: 'CLEAR_MEASUREMENT', id: marker.id })
-                            dispatch({ type: 'SET_ACTIVE_MARKER', id: marker.id })
+                            dispatch({
+                              type: 'CLEAR_MEASUREMENT',
+                              id: marker.id,
+                            })
+                            dispatch({
+                              type: 'SET_ACTIVE_MARKER',
+                              id: marker.id,
+                            })
                           }}
                         >
                           {String(content.remeasure)}
@@ -552,7 +598,8 @@ function CalibrationPage() {
                 })}
               </div>
               <div className="mt-2 text-xs text-muted-foreground">
-                {state.measurements.size} / {state.session.markers.length} {String(content.measured)}
+                {state.measurements.size} / {state.session.markers.length}{' '}
+                {String(content.measured)}
               </div>
             </div>
           )}
@@ -572,16 +619,23 @@ function CalibrationPage() {
           {state.result && (
             <div className="flex flex-col gap-3 p-4 border rounded-lg">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium">{String(content.results)}</span>
+                <span className="text-sm font-medium">
+                  {String(content.results)}
+                </span>
                 {qualityBadge && (
-                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${qualityBadge.className}`}>
+                  <span
+                    className={`text-xs font-medium px-2 py-0.5 rounded-full ${qualityBadge.className}`}
+                  >
                     {qualityBadge.label}
                   </span>
                 )}
               </div>
 
               {cyWarning && (
-                <Badge variant="outline" className="text-yellow-600 border-yellow-500 text-xs">
+                <Badge
+                  variant="outline"
+                  className="text-yellow-600 border-yellow-500 text-xs"
+                >
                   {String(content.cyWarning)}
                 </Badge>
               )}
@@ -590,8 +644,12 @@ function CalibrationPage() {
               <table className="text-xs w-full">
                 <thead>
                   <tr className="border-b">
-                    <th className="text-left py-1 text-muted-foreground font-normal">{String(content.parameter)}</th>
-                    <th className="text-right py-1 text-muted-foreground font-normal">{String(content.calibrated)}</th>
+                    <th className="text-left py-1 text-muted-foreground font-normal">
+                      {String(content.parameter)}
+                    </th>
+                    <th className="text-right py-1 text-muted-foreground font-normal">
+                      {String(content.calibrated)}
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -601,18 +659,21 @@ function CalibrationPage() {
                       ['fy', state.result.intrinsics.fy],
                       ['cx', state.result.intrinsics.cx],
                       ['cy', state.result.intrinsics.cy],
-                    ] as [string, number][]
+                    ] as Array<[string, number]>
                   ).map(([name, val]) => (
                     <tr key={name} className="border-b last:border-0">
                       <td className="py-1 font-mono">{name}</td>
-                      <td className="py-1 text-right font-mono">{val.toFixed(2)}</td>
+                      <td className="py-1 text-right font-mono">
+                        {val.toFixed(2)}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
 
               <div className="text-xs text-muted-foreground">
-                {String(content.meanError)}: {state.result.meanReprojectionError.toFixed(2)} px
+                {String(content.meanError)}:{' '}
+                {state.result.meanReprojectionError.toFixed(2)} px
               </div>
 
               {/* Reprojection table */}
@@ -621,10 +682,18 @@ function CalibrationPage() {
                   <table className="text-xs w-full">
                     <thead>
                       <tr className="border-b">
-                        <th className="text-left py-1 text-muted-foreground font-normal">{String(content.markerCol)}</th>
-                        <th className="text-right py-1 text-muted-foreground font-normal">{String(content.measuredCol)}</th>
-                        <th className="text-right py-1 text-muted-foreground font-normal">{String(content.projectedCol)}</th>
-                        <th className="text-right py-1 text-muted-foreground font-normal">{String(content.errorCol)}</th>
+                        <th className="text-left py-1 text-muted-foreground font-normal">
+                          {String(content.markerCol)}
+                        </th>
+                        <th className="text-right py-1 text-muted-foreground font-normal">
+                          {String(content.measuredCol)}
+                        </th>
+                        <th className="text-right py-1 text-muted-foreground font-normal">
+                          {String(content.projectedCol)}
+                        </th>
+                        <th className="text-right py-1 text-muted-foreground font-normal">
+                          {String(content.errorCol)}
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
@@ -632,12 +701,16 @@ function CalibrationPage() {
                         <tr key={row.id} className="border-b last:border-0">
                           <td className="py-1 font-mono">{row.id}</td>
                           <td className="py-1 text-right font-mono">
-                            {row.measuredU.toFixed(0)},{row.measuredV.toFixed(0)}
+                            {row.measuredU.toFixed(0)},
+                            {row.measuredV.toFixed(0)}
                           </td>
                           <td className="py-1 text-right font-mono">
-                            {row.projectedU.toFixed(0)},{row.projectedV.toFixed(0)}
+                            {row.projectedU.toFixed(0)},
+                            {row.projectedV.toFixed(0)}
                           </td>
-                          <td className={`py-1 text-right font-mono ${row.errorPx > 5 ? 'text-red-500' : row.errorPx > 2 ? 'text-yellow-500' : 'text-green-600'}`}>
+                          <td
+                            className={`py-1 text-right font-mono ${row.errorPx > 5 ? 'text-red-500' : row.errorPx > 2 ? 'text-yellow-500' : 'text-green-600'}`}
+                          >
                             {row.errorPx.toFixed(1)}
                           </td>
                         </tr>
@@ -647,7 +720,9 @@ function CalibrationPage() {
                 </div>
               )}
 
-              <Label htmlFor="saveName" className="text-sm font-medium mt-2">{String(content.saveAs)}</Label>
+              <Label htmlFor="saveName" className="text-sm font-medium mt-2">
+                {String(content.saveAs)}
+              </Label>
               <Input
                 id="saveName"
                 type="text"

@@ -68,7 +68,10 @@ const calibrationContent = {
     }),
 
     // Toast messages
-    toastSaved: t({ en: 'Calibration Saved', ja: 'キャリブレーションを保存しました' }),
+    toastSaved: t({
+      en: 'Calibration Saved',
+      ja: 'キャリブレーションを保存しました',
+    }),
     toastSavedDesc: t({
       en: 'Calibration intrinsics saved to a JSON file.',
       ja: 'キャリブレーション内部パラメーターをJSONファイルに保存しました。',

@@ -3,16 +3,14 @@ import { useIntlayer } from 'react-intlayer'
 
 import { VideoControls } from './video-player/video-controls'
 import type { SensorOffsetValues } from '@/lib/config-file'
-import type { Projector } from '@/lib/gaze-projection'
+import type { type CameraIntrinsics,
+  Projector,
+  buildProjector,
+  debugProjector,
+  projectGazeSample } from '@/lib/gaze-projection'
 import type { VideoExportState } from '@/lib/video-export'
 import { Button } from '@/components/ui/button'
 import { applySensorOffsetsToConfig } from '@/lib/config-file'
-import {
-  buildProjector,
-  debugProjector,
-  projectGazeSample,
-  type CameraIntrinsics,
-} from '@/lib/gaze-projection'
 import {
   INITIAL_VIDEO_EXPORT_STATE,
   createVideoExportState,

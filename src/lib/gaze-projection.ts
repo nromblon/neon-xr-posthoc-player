@@ -208,10 +208,12 @@ export function buildProjector(
   const p = configJson.sensorCalibration.offset.position
   const mountPosition = vec3.fromValues(p.x, -p.y, p.z)
 
-  const K: CameraIntrinsics = intrinsics ?? (() => {
-    const fx = videoWidth / 2 / Math.tan(toRad(fovHorizontalDeg) / 2)
-    return { fx, fy: fx, cx: videoWidth / 2, cy: videoHeight / 2 }
-  })()
+  const K: CameraIntrinsics =
+    intrinsics ??
+    (() => {
+      const fx = videoWidth / 2 / Math.tan(toRad(fovHorizontalDeg) / 2)
+      return { fx, fy: fx, cx: videoWidth / 2, cy: videoHeight / 2 }
+    })()
 
   return {
     mountQuat,

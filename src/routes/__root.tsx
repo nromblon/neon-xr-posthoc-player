@@ -7,17 +7,20 @@ import {
 } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
-import { IntlayerProvider } from 'react-intlayer'
-import TanStackQueryDevtools from '../integrations/tanstack-query/devtools'
+import { IntlayerProvider, useLocale  } from 'react-intlayer'
 import { Globe, ScanIcon, Settings2Icon } from 'lucide-react'
-import { useLocale } from 'react-intlayer'
+import TanStackQueryDevtools from '../integrations/tanstack-query/devtools'
+import appCss from '../styles.css?url'
 import type { Locale } from 'intlayer'
 
-import appCss from '../styles.css?url'
 import type { QueryClient } from '@tanstack/react-query'
 import { Toaster } from '@/components/ui/sonner'
 import { Button } from '@/components/ui/button'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
 import {
   Select,
   SelectContent,
@@ -97,7 +100,11 @@ function SettingsMenu() {
                   Tools
                 </span>
                 <Link to="/calibration">
-                  <Button variant="outline" size="sm" className="w-full justify-start gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full justify-start gap-2"
+                  >
                     <ScanIcon className="h-3.5 w-3.5" />
                     Calibrate
                   </Button>

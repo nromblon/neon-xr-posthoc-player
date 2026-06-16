@@ -859,29 +859,41 @@ function App() {
                 id="projector-settings"
                 className="flex flex-col gap-2 p-4 border-2 border-accent rounded-md"
               >
-                <div id="recording-mode-select-wrapper" className="flex justify-between">
-                  <div id="recording-mode-selection" className="flex flex-col justify-start items-start gap-2">
-                  <Label className='text-xs ' htmlFor="recording-mode-select">
-                    {content.recordingMode}
-                  </Label>
-                  <Select
-                    value={selectedFrustumName}
-                    onValueChange={setSelectedFrustumName}
+                <div
+                  id="recording-mode-select-wrapper"
+                  className="flex justify-between"
+                >
+                  <div
+                    id="recording-mode-selection"
+                    className="flex flex-col justify-start items-start gap-2"
                   >
-                    <SelectTrigger id="recording-mode-select" className="h-8 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent id="recording-mode-select-content">
-                      <SelectItem value={FOV_ESTIMATE_VALUE}>
-                        {content.usingFovEstimate}
-                      </SelectItem>
-                      {frustumOptions.map((calibration) => (
-                        <SelectItem key={calibration.name} value={calibration.name}>
-                          {calibration.name}
+                    <Label className="text-xs " htmlFor="recording-mode-select">
+                      {content.recordingMode}
+                    </Label>
+                    <Select
+                      value={selectedFrustumName}
+                      onValueChange={setSelectedFrustumName}
+                    >
+                      <SelectTrigger
+                        id="recording-mode-select"
+                        className="h-8 text-xs"
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent id="recording-mode-select-content">
+                        <SelectItem value={FOV_ESTIMATE_VALUE}>
+                          {content.usingFovEstimate}
                         </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                        {frustumOptions.map((calibration) => (
+                          <SelectItem
+                            key={calibration.name}
+                            value={calibration.name}
+                          >
+                            {calibration.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <Button
@@ -908,15 +920,21 @@ function App() {
                   />
                 </div>
                 {selectedCalibration ? (
-                    <Badge variant="secondary" className="text-xs w-fit text-green-700 dark:text-green-400">
-                      {content.calibratedIntrinsicsLoaded}{' '}
-                      {`(${String(content.meanError)}: ${selectedCalibration.meanReprojectionError.toFixed(1)} px)`}
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="text-xs w-fit text-muted-foreground">
-                      {content.usingFovEstimate}
-                    </Badge>
-                  )}
+                  <Badge
+                    variant="secondary"
+                    className="text-xs w-fit text-green-700 dark:text-green-400"
+                  >
+                    {content.calibratedIntrinsicsLoaded}{' '}
+                    {`(${String(content.meanError)}: ${selectedCalibration.meanReprojectionError.toFixed(1)} px)`}
+                  </Badge>
+                ) : (
+                  <Badge
+                    variant="outline"
+                    className="text-xs w-fit text-muted-foreground"
+                  >
+                    {content.usingFovEstimate}
+                  </Badge>
+                )}
                 <Label className={'text-xs'} htmlFor="calibration-file-upload">
                   {content.calibrationFile}
                 </Label>

@@ -11,7 +11,7 @@ export interface CalibrationMarker {
 export interface CalibrationSession {
   recordingMode: RecordingMode
   markerDistance: number
-  markers: CalibrationMarker[]
+  markers: Array<CalibrationMarker>
 }
 
 export interface MarkerMeasurement {
@@ -83,10 +83,10 @@ export function projectToPixel(
  * Requires at least 4 measurements with sufficient angular spread.
  */
 export function solveFrustumCalibration(
-  measurements: MarkerMeasurement[],
+  measurements: Array<MarkerMeasurement>,
   videoWidth: number,
   videoHeight: number,
-): FrustumCalibrationResult & { reprojectionRows: ReprojectionRow[] } {
+): FrustumCalibrationResult & { reprojectionRows: Array<ReprojectionRow> } {
   if (measurements.length < 4) {
     throw new CalibrationError(
       `Need at least 4 marker measurements, got ${measurements.length}.`,
@@ -96,8 +96,16 @@ export function solveFrustumCalibration(
   // Accumulate normal equations A^T A x = A^T b for [fx, cx] and [fy, cy]
   // u = (rx/rz)*fx + cx  →  row: [rx/rz, 1]
   // v = (ry/rz)*fy + cy  →  row: [ry/rz, 1]
-  let a00u = 0, a01u = 0, a11u = 0, b0u = 0, b1u = 0
-  let a00v = 0, a01v = 0, a11v = 0, b0v = 0, b1v = 0
+  let a00u = 0,
+    a01u = 0,
+    a11u = 0,
+    b0u = 0,
+    b1u = 0
+  let a00v = 0,
+    a01v = 0,
+    a11v = 0,
+    b0v = 0,
+    b1v = 0
 
   for (const m of measurements) {
     const az = toRad(m.az)
@@ -154,7 +162,7 @@ export function solveFrustumCalibration(
   const intrinsics: CameraIntrinsics = { fx, fy, cx, cy }
 
   // Compute reprojection errors
-  const reprojectionRows: ReprojectionRow[] = measurements.map((m) => {
+  const reprojectionRows: Array<ReprojectionRow> = measurements.map((m) => {
     const { u: projU, v: projV } = projectToPixel(m.az, m.el, intrinsics)
     return {
       id: m.id,
@@ -281,7 +289,10 @@ export function parseFrustumCalibrationFile(
     }
   }
 
-  if (typeof obj.videoWidth !== 'number' || typeof obj.videoHeight !== 'number') {
+  if (
+    typeof obj.videoWidth !== 'number' ||
+    typeof obj.videoHeight !== 'number'
+  ) {
     throw new CalibrationError(
       '"videoWidth" and "videoHeight" must be numbers.',
     )
@@ -289,7 +300,8 @@ export function parseFrustumCalibrationFile(
 
   return {
     name: obj.name,
-    recordingMode: typeof obj.recordingMode === 'string' ? obj.recordingMode : '',
+    recordingMode:
+      typeof obj.recordingMode === 'string' ? obj.recordingMode : '',
     intrinsics: {
       fx: ko.fx as number,
       fy: ko.fy as number,
@@ -307,12 +319,12 @@ export function parseFrustumCalibrationFile(
 }
 
 /** List user-uploaded frustum calibrations from localStorage. */
-export function listUploadedFrustumCalibrations(): FrustumCalibrationFile[] {
+export function listUploadedFrustumCalibrations(): Array<FrustumCalibrationFile> {
   const raw = localStorage.getItem(UPLOADS_STORAGE_KEY)
   if (!raw) return []
   try {
     const parsed = JSON.parse(raw)
-    return Array.isArray(parsed) ? (parsed as FrustumCalibrationFile[]) : []
+    return Array.isArray(parsed) ? (parsed as Array<FrustumCalibrationFile>) : []
   } catch {
     return []
   }
@@ -324,7 +336,7 @@ export function listUploadedFrustumCalibrations(): FrustumCalibrationFile[] {
  */
 export function saveUploadedFrustumCalibration(
   calibration: FrustumCalibrationFile,
-): FrustumCalibrationFile[] {
+): Array<FrustumCalibrationFile> {
   const existing = listUploadedFrustumCalibrations().filter(
     (c) => c.name !== calibration.name,
   )
@@ -344,7 +356,9 @@ export function parseFrustumCalibrationSession(
   try {
     parsed = JSON.parse(jsonText)
   } catch {
-    throw new CalibrationError('Invalid JSON: could not parse calibration session file.')
+    throw new CalibrationError(
+      'Invalid JSON: could not parse calibration session file.',
+    )
   }
 
   if (typeof parsed !== 'object' || parsed === null) {
@@ -353,7 +367,7 @@ export function parseFrustumCalibrationSession(
 
   const obj = parsed as Record<string, unknown>
 
-  const validModes: RecordingMode[] = ['LeftEye', 'RightEye', 'Binocular']
+  const validModes: Array<RecordingMode> = ['LeftEye', 'RightEye', 'Binocular']
   if (!validModes.includes(obj.recordingMode as RecordingMode)) {
     throw new CalibrationError(
       `"recordingMode" must be one of: ${validModes.join(', ')}. Got: "${String(obj.recordingMode)}".`,
@@ -370,7 +384,7 @@ export function parseFrustumCalibrationSession(
     throw new CalibrationError('"markers" must be a non-empty array.')
   }
 
-  const markers: CalibrationMarker[] = obj.markers.map(
+  const markers: Array<CalibrationMarker> = obj.markers.map(
     (m: unknown, i: number) => {
       if (typeof m !== 'object' || m === null) {
         throw new CalibrationError(`markers[${i}] must be an object.`)
@@ -380,18 +394,22 @@ export function parseFrustumCalibrationSession(
         throw new CalibrationError(`markers[${i}].id must be a number.`)
       }
       if (typeof mo.az !== 'number') {
-        throw new CalibrationError(`markers[${i}].az must be a number (degrees).`)
+        throw new CalibrationError(
+          `markers[${i}].az must be a number (degrees).`,
+        )
       }
       if (typeof mo.el !== 'number') {
-        throw new CalibrationError(`markers[${i}].el must be a number (degrees).`)
+        throw new CalibrationError(
+          `markers[${i}].el must be a number (degrees).`,
+        )
       }
-      return { id: mo.id as number, az: mo.az as number, el: mo.el as number }
+      return { id: mo.id, az: mo.az, el: mo.el }
     },
   )
 
   return {
     recordingMode: obj.recordingMode as RecordingMode,
-    markerDistance: obj.markerDistance as number,
+    markerDistance: obj.markerDistance,
     markers,
   }
 }
