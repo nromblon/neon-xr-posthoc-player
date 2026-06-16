@@ -176,6 +176,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const enabledLayersRef = useRef<Record<string, boolean>>({ gaze: true })
   const drawFrameRef = useRef<(() => void) | null>(null)
   const gazeStartMsRef = useRef(gazeStartMs)
+  const gazeOffset2dRef = useRef(gazeOffset2d)
   const frameDurationRef = useRef(DEFAULT_FRAME_DURATION_SECONDS)
   const previousFrameTimeRef = useRef<number | null>(null)
   const compositeCanvasRef = useRef<HTMLCanvasElement | null>(null)
@@ -317,12 +318,18 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         return
       }
 
+      // The 2D gaze offset is a final pixel-space nudge applied here at draw
+      // time (read from a ref) rather than baked into the projector. This keeps
+      // offset changes — whether typed in the UI or loaded from
+      // adjustments-config.json — applying immediately via a redraw, without
+      // racing the async projector rebuild.
+      const { x: gazeOffsetX, y: gazeOffsetY } = gazeOffset2dRef.current
       const nextCircleConfig = circleConfigRef.current
       context.clearRect(0, 0, canvas.width, canvas.height)
       context.beginPath()
       context.arc(
-        projectedPoint.x,
-        projectedPoint.y,
+        projectedPoint.x + gazeOffsetX,
+        projectedPoint.y + gazeOffsetY,
         nextCircleConfig.radius,
         0,
         2 * Math.PI,
@@ -383,6 +390,14 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     gazeIndexRef.current = 0
     drawFrameRef.current?.()
   }, [gazeStartMs])
+
+  // On 2D Gaze Offset Change: update ref and redraw. The offset is applied at
+  // draw time, so changes (UI edits or loaded adjustments-config) take effect
+  // immediately without rebuilding the projector.
+  useEffect(() => {
+    gazeOffset2dRef.current = gazeOffset2d
+    drawFrameRef.current?.()
+  }, [gazeOffset2d])
 
   // On Gaze Data File Change: load and parse new gaze data
   useEffect(() => {
@@ -524,8 +539,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
               videoWidth,
               videoHeight,
               fovHorizontalDeg,
-              gazeOffsetX: gazeOffset2d.x,
-              gazeOffsetY: gazeOffset2d.y,
             },
             calibratedIntrinsics,
           )
@@ -569,7 +582,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     }
   }, [
     fovHorizontalDeg,
-    gazeOffset2d,
     manualVideoDimensions,
     sensorOffsets,
     videoFile,
@@ -986,7 +998,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       )
 
       const frameDurationSeconds = 1 / fps
-      let frameIndex = 0
       let lastQueuedMediaTime = -1
       let frameEncodeQueue = Promise.resolve()
 
@@ -999,11 +1010,17 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         drawCompositeFrame()
         updateProgress()
 
+        // Stamp each frame with its real position in the source video
+        // (mediaTime) rather than a synthetic frameIndex * frameDuration value.
+        // Frames are captured in real time via requestVideoFrameCallback, so the
+        // captured frame count rarely equals realDuration * fps (dropped or
+        // duplicated frames). Index-based timestamps would make the exported
+        // video duration drift from real time and desync from the live-captured
+        // audio track. Using mediaTime keeps the export at the correct speed.
         const sample = new VideoSample(compositeCanvas, {
           duration: frameDurationSeconds,
-          timestamp: frameIndex * frameDurationSeconds,
+          timestamp: mediaTime,
         })
-        frameIndex += 1
 
         frameEncodeQueue = frameEncodeQueue.then(async () => {
           try {
