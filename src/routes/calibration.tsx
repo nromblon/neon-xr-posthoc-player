@@ -15,7 +15,7 @@ import {
   type ReprojectionRow,
   CalibrationError,
   parseFrustumCalibrationSession,
-  saveFrustumCalibration,
+  saveFrustumCalibrationFile,
   solveFrustumCalibration,
 } from '@/lib/frustum-calibration'
 
@@ -234,6 +234,8 @@ function drawOverlay(
 function CalibrationPage() {
   const content = useIntlayer('calibration')
   const [state, dispatch] = useReducer(reducer, initialState)
+  const [saveName, setSaveName] = React.useState('')
+  const [isSaving, setIsSaving] = React.useState(false)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const prevObjectUrlRef = useRef<string | null>(null)
@@ -353,6 +355,9 @@ function CalibrationPage() {
         solvedAt: raw.solvedAt,
       }
       dispatch({ type: 'SOLVE', result, rows: raw.reprojectionRows })
+      if (saveName.trim().length === 0) {
+        setSaveName(`${result.recordingMode}-frustum`)
+      }
     } catch (err) {
       toast.error(String(content.toastSolveError), {
         description: err instanceof CalibrationError ? err.message : String(err),
@@ -360,13 +365,26 @@ function CalibrationPage() {
     }
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!state.result) return
-    saveFrustumCalibration(state.result)
-    dispatch({ type: 'SAVE' })
-    toast.success(String(content.toastSaved), {
-      description: String(content.toastSavedDesc),
-    })
+    setIsSaving(true)
+    try {
+      await saveFrustumCalibrationFile(state.result, saveName)
+      dispatch({ type: 'SAVE' })
+      toast.success(String(content.toastSaved), {
+        description: String(content.toastSavedDesc),
+      })
+    } catch (err) {
+      // User cancelled the save dialog — stay in the solved state silently.
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        return
+      }
+      toast.error(String(content.toastSaveFailed), {
+        description: err instanceof Error ? err.message : String(err),
+      })
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   // -------------------------------------------------------------------------
@@ -403,9 +421,9 @@ function CalibrationPage() {
   // -------------------------------------------------------------------------
 
   return (
-    <div className="flex flex-col min-h-screen p-4 gap-4">
+    <div className="flex flex-col h-screen p-4 gap-4">
       {/* Header */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4 shrink-0">
         <Link to="/" className="text-sm text-muted-foreground hover:text-foreground">
           {String(content.backToPlayer)}
         </Link>
@@ -413,20 +431,19 @@ function CalibrationPage() {
       </div>
 
       {/* Main two-column layout */}
-      <div className="flex gap-4 flex-1 items-start">
-        {/* Left: Video + Canvas */}
-        <div className="flex-1 min-w-0">
+      <div className="flex gap-4 flex-1 min-h-0 items-start">
+        {/* Left: Video + Canvas — the video sizes itself to fit (no letterbox), wrapper shrink-wraps it */}
+        <div className="flex-1 min-w-0 min-h-0 h-full flex items-center justify-center overflow-hidden">
           {videoShowing ? (
-            <div
-              className="relative w-full"
-              style={{
-                aspectRatio: `${state.videoNativeWidth} / ${state.videoNativeHeight}`,
-              }}
-            >
+            <div className="relative">
               <video
                 ref={videoRef}
                 src={state.videoObjectUrl ?? undefined}
-                className="absolute inset-0 w-full h-full object-contain bg-black"
+                className="block bg-black"
+                style={{
+                  maxHeight: 'calc(100vh - 6rem)',
+                  maxWidth: '100%',
+                }}
                 controls
               />
               <canvas
@@ -447,7 +464,7 @@ function CalibrationPage() {
         </div>
 
         {/* Right: Controls */}
-        <div className="w-80 flex flex-col gap-4 shrink-0">
+        <div className="w-80 flex flex-col gap-4 shrink-0 h-full overflow-y-auto">
           {/* Session upload */}
           <div className="flex flex-col gap-2 p-4 border rounded-lg">
             <Label className="text-sm font-medium">{String(content.uploadSession)}</Label>
@@ -630,7 +647,22 @@ function CalibrationPage() {
                 </div>
               )}
 
-              <Button onClick={handleSave} variant="outline" disabled={state.phase === 'saved'}>
+              <Label htmlFor="saveName" className="text-sm font-medium mt-2">{String(content.saveAs)}</Label>
+              <Input
+                id="saveName"
+                type="text"
+                placeholder="frustum-calibration"
+                value={saveName}
+                onChange={(e) => setSaveName(e.target.value)}
+              />
+
+              <Button
+                onClick={() => {
+                  void handleSave()
+                }}
+                variant="outline"
+                disabled={isSaving || saveName.trim().length === 0}
+              >
                 {String(content.save)}
               </Button>
             </div>

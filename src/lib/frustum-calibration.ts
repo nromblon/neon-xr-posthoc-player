@@ -182,46 +182,155 @@ export function solveFrustumCalibration(
 }
 
 // ---------------------------------------------------------------------------
-// localStorage persistence
+// File persistence (save dialog)
 // ---------------------------------------------------------------------------
 
-const STORAGE_PREFIX = 'frustum_calibration:'
-
-export function saveFrustumCalibration(result: FrustumCalibrationResult): void {
-  localStorage.setItem(
-    STORAGE_PREFIX + result.recordingMode,
-    JSON.stringify(result),
-  )
+/** Shape of the saved JSON file: the solved result plus a user-provided name. */
+export interface FrustumCalibrationFile extends FrustumCalibrationResult {
+  name: string
 }
 
-export function loadFrustumCalibration(
-  mode: string,
-): FrustumCalibrationResult | null {
-  const raw = localStorage.getItem(STORAGE_PREFIX + mode)
-  if (!raw) return null
-  try {
-    return JSON.parse(raw) as FrustumCalibrationResult
-  } catch {
-    return null
+/**
+ * Serialize the solved calibration (with a `name` field) and prompt the user to
+ * save it as a JSON file. Uses the File System Access save dialog when available,
+ * falling back to a download. Throws if the user cancels the dialog.
+ */
+export async function saveFrustumCalibrationFile(
+  result: FrustumCalibrationResult,
+  name: string,
+): Promise<void> {
+  const fileData: FrustumCalibrationFile = { name, ...result }
+  const serialized = JSON.stringify(fileData, null, 2)
+  const trimmed = name.trim()
+  const suggestedName = `${trimmed.length > 0 ? trimmed : 'frustum-calibration'}.json`
+
+  if (
+    typeof window !== 'undefined' &&
+    'showSaveFilePicker' in window &&
+    typeof window.showSaveFilePicker === 'function'
+  ) {
+    const saveFilePicker = window.showSaveFilePicker.bind(window)
+    const fileHandle = await saveFilePicker({
+      suggestedName,
+      types: [
+        {
+          description: 'JSON Files',
+          accept: { 'application/json': ['.json'] },
+        },
+      ],
+    })
+    const writable = await fileHandle.createWritable()
+    await writable.write(serialized)
+    await writable.close()
+    return
   }
+
+  const blob = new Blob([serialized], { type: 'application/json' })
+  const objectUrl = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = objectUrl
+  link.download = suggestedName
+  link.click()
+  URL.revokeObjectURL(objectUrl)
 }
 
-export function listFrustumCalibrations(): FrustumCalibrationResult[] {
-  const results: FrustumCalibrationResult[] = []
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i)
-    if (key?.startsWith(STORAGE_PREFIX)) {
-      const raw = localStorage.getItem(key)
-      if (raw) {
-        try {
-          results.push(JSON.parse(raw) as FrustumCalibrationResult)
-        } catch {
-          // skip malformed entries
-        }
-      }
+// ---------------------------------------------------------------------------
+// Uploaded calibration parsing + localStorage persistence
+//
+// NOTE: uploaded calibrations are kept in localStorage for now. This is a
+// temporary store — they are intended to move to a database in the future.
+// ---------------------------------------------------------------------------
+
+const UPLOADS_STORAGE_KEY = 'frustum_calibration_uploads'
+
+/**
+ * Validate and parse a saved frustum calibration JSON file (the shape produced
+ * by `saveFrustumCalibrationFile`, i.e. a result plus a `name`). Throws a
+ * `CalibrationError` with a descriptive message on any structural problem.
+ */
+export function parseFrustumCalibrationFile(
+  jsonText: string,
+): FrustumCalibrationFile {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(jsonText)
+  } catch {
+    throw new CalibrationError(
+      'Invalid JSON: could not parse frustum calibration file.',
+    )
+  }
+
+  if (typeof parsed !== 'object' || parsed === null) {
+    throw new CalibrationError('Frustum calibration must be a JSON object.')
+  }
+
+  const obj = parsed as Record<string, unknown>
+
+  if (typeof obj.name !== 'string' || obj.name.trim().length === 0) {
+    throw new CalibrationError('"name" must be a non-empty string.')
+  }
+
+  const k = obj.intrinsics
+  if (typeof k !== 'object' || k === null) {
+    throw new CalibrationError('"intrinsics" must be an object.')
+  }
+  const ko = k as Record<string, unknown>
+  for (const key of ['fx', 'fy', 'cx', 'cy'] as const) {
+    if (typeof ko[key] !== 'number' || !Number.isFinite(ko[key])) {
+      throw new CalibrationError(`"intrinsics.${key}" must be a finite number.`)
     }
   }
-  return results
+
+  if (typeof obj.videoWidth !== 'number' || typeof obj.videoHeight !== 'number') {
+    throw new CalibrationError(
+      '"videoWidth" and "videoHeight" must be numbers.',
+    )
+  }
+
+  return {
+    name: obj.name,
+    recordingMode: typeof obj.recordingMode === 'string' ? obj.recordingMode : '',
+    intrinsics: {
+      fx: ko.fx as number,
+      fy: ko.fy as number,
+      cx: ko.cx as number,
+      cy: ko.cy as number,
+    },
+    videoWidth: obj.videoWidth,
+    videoHeight: obj.videoHeight,
+    meanReprojectionError:
+      typeof obj.meanReprojectionError === 'number'
+        ? obj.meanReprojectionError
+        : 0,
+    solvedAt: typeof obj.solvedAt === 'string' ? obj.solvedAt : '',
+  }
+}
+
+/** List user-uploaded frustum calibrations from localStorage. */
+export function listUploadedFrustumCalibrations(): FrustumCalibrationFile[] {
+  const raw = localStorage.getItem(UPLOADS_STORAGE_KEY)
+  if (!raw) return []
+  try {
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed) ? (parsed as FrustumCalibrationFile[]) : []
+  } catch {
+    return []
+  }
+}
+
+/**
+ * Persist an uploaded frustum calibration to localStorage. If one with the same
+ * `name` already exists it is replaced. Returns the updated list.
+ */
+export function saveUploadedFrustumCalibration(
+  calibration: FrustumCalibrationFile,
+): FrustumCalibrationFile[] {
+  const existing = listUploadedFrustumCalibrations().filter(
+    (c) => c.name !== calibration.name,
+  )
+  const next = [...existing, calibration]
+  localStorage.setItem(UPLOADS_STORAGE_KEY, JSON.stringify(next))
+  return next
 }
 
 // ---------------------------------------------------------------------------

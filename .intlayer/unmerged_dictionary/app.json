@@ -82,8 +82,8 @@
       "calibrationFile": {
         "nodeType": "translation",
         "translation": {
-          "en": "Neon XR Calibration File (config.json)",
-          "ja": "Neon XR キャリブレーションファイル (config.json)"
+          "en": "Sensor Offset Calibration File (config.json)",
+          "ja": "センサー オフセット キャリブレーションファイル (config.json)"
         }
       },
       "recordingMode": {
@@ -93,11 +93,18 @@
           "ja": "録画モード"
         }
       },
+      "uploadFrustumCalibrationTitle": {
+        "nodeType": "translation",
+        "translation": {
+          "en": "Upload Recording Frustum Calibration Intrinsics",
+          "ja": "録画視錐台キャリブレーション内部パラメーターをアップロード"
+        }
+      },
       "calibratedIntrinsicsLoaded": {
         "nodeType": "translation",
         "translation": {
-          "en": "Calibrated intrinsics loaded",
-          "ja": "キャリブレーション済み内部パラメーター読み込み済み"
+          "en": "intrinsics loaded",
+          "ja": "内部パラメーターを読み込みました"
         }
       },
       "usingFovEstimate": {
@@ -315,6 +322,27 @@
         "translation": {
           "en": "Save Failed",
           "ja": "保存に失敗しました"
+        }
+      },
+      "toastFrustumLoaded": {
+        "nodeType": "translation",
+        "translation": {
+          "en": "Frustum Calibration Loaded",
+          "ja": "視錐台キャリブレーションを読み込みました"
+        }
+      },
+      "toastFrustumLoadedDesc": {
+        "nodeType": "translation",
+        "translation": {
+          "en": "Added the uploaded calibration as a recording mode option.",
+          "ja": "アップロードしたキャリブレーションを録画モードの選択肢に追加しました。"
+        }
+      },
+      "toastFrustumLoadFailed": {
+        "nodeType": "translation",
+        "translation": {
+          "en": "Frustum Calibration Load Failed",
+          "ja": "視錐台キャリブレーションの読み込みに失敗しました"
         }
       },
       "toastGazeFileNotFound": {

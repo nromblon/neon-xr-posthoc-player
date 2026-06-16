@@ -43,18 +43,18 @@ const log = {
   "prefix": "\u001b[38;5;239m[intlayer] \u001b[0m"
 };
 const system = {
-  "baseDir": "D:\\Projects\\Neon-XR-Posthoc-Player\\neon-xr-posthoc-player",
-  "moduleAugmentationDir": "D:\\Projects\\Neon-XR-Posthoc-Player\\neon-xr-posthoc-player\\.intlayer\\types",
-  "unmergedDictionariesDir": "D:\\Projects\\Neon-XR-Posthoc-Player\\neon-xr-posthoc-player\\.intlayer\\unmerged_dictionary",
-  "remoteDictionariesDir": "D:\\Projects\\Neon-XR-Posthoc-Player\\neon-xr-posthoc-player\\.intlayer\\remote_dictionary",
-  "dictionariesDir": "D:\\Projects\\Neon-XR-Posthoc-Player\\neon-xr-posthoc-player\\.intlayer\\dictionary",
-  "dynamicDictionariesDir": "D:\\Projects\\Neon-XR-Posthoc-Player\\neon-xr-posthoc-player\\.intlayer\\dynamic_dictionary",
-  "fetchDictionariesDir": "D:\\Projects\\Neon-XR-Posthoc-Player\\neon-xr-posthoc-player\\.intlayer\\fetch_dictionary",
-  "typesDir": "D:\\Projects\\Neon-XR-Posthoc-Player\\neon-xr-posthoc-player\\.intlayer\\types",
-  "mainDir": "D:\\Projects\\Neon-XR-Posthoc-Player\\neon-xr-posthoc-player\\.intlayer\\main",
-  "configDir": "D:\\Projects\\Neon-XR-Posthoc-Player\\neon-xr-posthoc-player\\.intlayer\\config",
-  "cacheDir": "D:\\Projects\\Neon-XR-Posthoc-Player\\neon-xr-posthoc-player\\.intlayer\\cache",
-  "tempDir": "D:\\Projects\\Neon-XR-Posthoc-Player\\neon-xr-posthoc-player\\.intlayer\\tmp"
+  "baseDir": "E:\\NeilRomblon\\Projects\\neon-xr-posthoc-player",
+  "moduleAugmentationDir": "E:\\NeilRomblon\\Projects\\neon-xr-posthoc-player\\.intlayer\\types",
+  "unmergedDictionariesDir": "E:\\NeilRomblon\\Projects\\neon-xr-posthoc-player\\.intlayer\\unmerged_dictionary",
+  "remoteDictionariesDir": "E:\\NeilRomblon\\Projects\\neon-xr-posthoc-player\\.intlayer\\remote_dictionary",
+  "dictionariesDir": "E:\\NeilRomblon\\Projects\\neon-xr-posthoc-player\\.intlayer\\dictionary",
+  "dynamicDictionariesDir": "E:\\NeilRomblon\\Projects\\neon-xr-posthoc-player\\.intlayer\\dynamic_dictionary",
+  "fetchDictionariesDir": "E:\\NeilRomblon\\Projects\\neon-xr-posthoc-player\\.intlayer\\fetch_dictionary",
+  "typesDir": "E:\\NeilRomblon\\Projects\\neon-xr-posthoc-player\\.intlayer\\types",
+  "mainDir": "E:\\NeilRomblon\\Projects\\neon-xr-posthoc-player\\.intlayer\\main",
+  "configDir": "E:\\NeilRomblon\\Projects\\neon-xr-posthoc-player\\.intlayer\\config",
+  "cacheDir": "E:\\NeilRomblon\\Projects\\neon-xr-posthoc-player\\.intlayer\\cache",
+  "tempDir": "E:\\NeilRomblon\\Projects\\neon-xr-posthoc-player\\.intlayer\\tmp"
 };
 const content = {
   "fileExtensions": [
@@ -73,10 +73,10 @@ const content = {
     ".content.yml"
   ],
   "contentDir": [
-    "D:\\Projects\\Neon-XR-Posthoc-Player\\neon-xr-posthoc-player"
+    "E:\\NeilRomblon\\Projects\\neon-xr-posthoc-player"
   ],
   "codeDir": [
-    "D:\\Projects\\Neon-XR-Posthoc-Player\\neon-xr-posthoc-player"
+    "E:\\NeilRomblon\\Projects\\neon-xr-posthoc-player"
   ],
   "excludedPath": [
     "**/node_modules/**",

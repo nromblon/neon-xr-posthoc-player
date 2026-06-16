@@ -54,6 +54,7 @@ const calibrationContent = {
     projectedCol: t({ en: 'Projected (u,v)', ja: '投影値 (u,v)' }),
     errorCol: t({ en: 'Error (px)', ja: '誤差 (px)' }),
     meanError: t({ en: 'Mean error', ja: '平均誤差' }),
+    saveAs: t({ en: 'Save As', ja: '名前を付けて保存' }),
 
     // Quality badges
     qualityExcellent: t({ en: 'Excellent', ja: '優秀' }),
@@ -62,16 +63,17 @@ const calibrationContent = {
 
     // cy warning
     cyWarning: t({
-      en: 'Principal point (cy) is significantly off-center. Check marker placement.',
-      ja: '主点 (cy) が中心から大きくずれています。マーカーの配置を確認してください。',
+      en: 'Principal point (cy) is significantly off-center.',
+      ja: '主点 (cy) が中心から大きくずれています',
     }),
 
     // Toast messages
     toastSaved: t({ en: 'Calibration Saved', ja: 'キャリブレーションを保存しました' }),
     toastSavedDesc: t({
-      en: 'Calibration intrinsics saved to local storage.',
-      ja: 'キャリブレーション内部パラメーターをローカルストレージに保存しました。',
+      en: 'Calibration intrinsics saved to a JSON file.',
+      ja: 'キャリブレーション内部パラメーターをJSONファイルに保存しました。',
     }),
+    toastSaveFailed: t({ en: 'Save Failed', ja: '保存に失敗しました' }),
     toastSessionError: t({ en: 'Session Error', ja: 'セッションエラー' }),
     toastSolveError: t({ en: 'Solve Error', ja: '解決エラー' }),
     toastSolveErrorDesc: t({

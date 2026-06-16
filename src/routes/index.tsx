@@ -5,6 +5,7 @@ import { useIntlayer } from 'react-intlayer'
 import Color from 'color'
 import {
   BookXIcon,
+  FileUpIcon,
   HistoryIcon,
   SaveIcon,
   SkipBackIcon,
@@ -13,6 +14,7 @@ import {
 import { toast } from 'sonner'
 import type { FolderPickEntry } from '@/components/ui/folder-picker'
 import type { AdjustmentsConfigFile } from '@/lib/config-file'
+import type { FrustumCalibrationFile } from '@/lib/frustum-calibration'
 import type { VideoExportState } from '@/lib/video-export'
 import { FolderPicker } from '@/components/ui/folder-picker'
 import { Input } from '@/components/ui/input'
@@ -35,9 +37,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import type { RecordingMode } from '@/lib/frustum-calibration'
-import { loadFrustumCalibration } from '@/lib/frustum-calibration'
-import type { CameraIntrinsics } from '@/lib/gaze-projection'
+import {
+  listUploadedFrustumCalibrations,
+  parseFrustumCalibrationFile,
+  saveUploadedFrustumCalibration,
+} from '@/lib/frustum-calibration'
+import { PRESET_FRUSTUM_CALIBRATIONS } from '@/data/frustum-calibrations'
 import {
   Empty,
   EmptyDescription,
@@ -69,6 +74,8 @@ import {
 export const Route = createFileRoute('/')({ component: App })
 
 const DEFAULT_FRAME_DURATION_MS = 1000 / 30
+// Sentinel select value for the "no calibration / FOV-derived intrinsics" option.
+const FOV_ESTIMATE_VALUE = '__fov_estimate__'
 const SCENE_VIDEO_EXTENSIONS = new Set([
   'mp4',
   'mov',
@@ -93,6 +100,7 @@ function App() {
   const [packagePickerKey, setPackagePickerKey] = React.useState(0)
   const videoInputRef = useRef<HTMLInputElement | null>(null)
   const configInputRef = useRef<HTMLInputElement | null>(null)
+  const frustumUploadInputRef = useRef<HTMLInputElement | null>(null)
   const adjustmentsInputRef = useRef<HTMLInputElement | null>(null)
   const xTranslateOffsetRef = useRef<HTMLInputElement | null>(null)
   const yTranslateOffsetRef = useRef<HTMLInputElement | null>(null)
@@ -118,10 +126,14 @@ function App() {
   const [configFile, setConfigFile] = React.useState<File | null>(null)
   // Horizontal FOV for projection calculations
   const [fovHorizontalDeg, setFovHorizontalDeg] = React.useState(82)
-  // Recording mode and calibrated intrinsics
-  const [recordingMode, setRecordingMode] = React.useState<RecordingMode>('LeftEye')
-  const [calibratedIntrinsics, setCalibratedIntrinsics] =
-    React.useState<CameraIntrinsics | null>(null)
+  // Frustum calibration selection.
+  // The select offers a "Use FOV estimate" default plus every available
+  // calibration (bundled presets + user uploads), keyed by the calibration name.
+  const [selectedFrustumName, setSelectedFrustumName] =
+    React.useState<string>(FOV_ESTIMATE_VALUE)
+  const [uploadedCalibrations, setUploadedCalibrations] = React.useState<
+    Array<FrustumCalibrationFile>
+  >([])
   const [exportGazeVideo, setExportGazeVideo] = React.useState<
     (() => Promise<void>) | null
   >(null)
@@ -610,6 +622,38 @@ function App() {
     }
   }
 
+  // Available frustum calibrations: bundled presets + user uploads.
+  const frustumOptions = React.useMemo(
+    () => [...PRESET_FRUSTUM_CALIBRATIONS, ...uploadedCalibrations],
+    [uploadedCalibrations],
+  )
+  const selectedCalibration =
+    frustumOptions.find((c) => c.name === selectedFrustumName) ?? null
+  const calibratedIntrinsics = selectedCalibration?.intrinsics ?? null
+
+  const handleFrustumUpload = (file: File) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      try {
+        const calibration = parseFrustumCalibrationFile(
+          e.target?.result as string,
+        )
+        const next = saveUploadedFrustumCalibration(calibration)
+        setUploadedCalibrations(next)
+        setSelectedFrustumName(calibration.name)
+        toast.success(content.toastFrustumLoaded, {
+          description: content.toastFrustumLoadedDesc,
+        })
+      } catch (error) {
+        console.error('Failed to parse frustum calibration file:', error)
+        toast.error(content.toastFrustumLoadFailed, {
+          description: error instanceof Error ? error.message : String(error),
+        })
+      }
+    }
+    reader.readAsText(file)
+  }
+
   const sectionLabelClassName = 'text-sm font-medium'
   const sectionContentClassName = 'flex flex-col gap-2'
   const isExportBusy =
@@ -673,14 +717,10 @@ function App() {
     }
   }, [exportGazeVideo, videoExportState.errorMessage, videoExportState.status])
 
+  // Load user-uploaded calibrations from localStorage on mount.
   React.useEffect(() => {
-    const saved = loadFrustumCalibration(recordingMode)
-    if (saved && videoFile) {
-      setCalibratedIntrinsics(saved.intrinsics)
-    } else {
-      setCalibratedIntrinsics(null)
-    }
-  }, [recordingMode, videoFile])
+    setUploadedCalibrations(listUploadedFrustumCalibrations())
+  }, [])
 
   return (
     <div className="flex justify-between items-start min-h-screen my-4 pt-12">
@@ -819,37 +859,64 @@ function App() {
                 id="projector-settings"
                 className="flex flex-col gap-2 p-4 border-2 border-accent rounded-md"
               >
-                <Label className={'text-xs'} htmlFor="recording-mode-select">
-                  {content.recordingMode}
-                </Label>
-                <Select
-                  value={recordingMode}
-                  onValueChange={(v) => setRecordingMode(v as RecordingMode)}
-                >
-                  <SelectTrigger id="recording-mode-select" className="h-8 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="LeftEye">Left Eye</SelectItem>
-                    <SelectItem value="RightEye">Right Eye</SelectItem>
-                    <SelectItem value="Binocular">Binocular</SelectItem>
-                  </SelectContent>
-                </Select>
-                {calibratedIntrinsics ? (
-                  <Badge variant="secondary" className="text-xs w-fit text-green-700 dark:text-green-400">
-                    {content.calibratedIntrinsicsLoaded}{' '}
-                    {(() => {
-                      const saved = loadFrustumCalibration(recordingMode)
-                      return saved
-                        ? `(${String(content.meanError)}: ${saved.meanReprojectionError.toFixed(1)} px)`
-                        : ''
-                    })()}
-                  </Badge>
-                ) : (
-                  <Badge variant="outline" className="text-xs w-fit text-muted-foreground">
-                    {content.usingFovEstimate}
-                  </Badge>
-                )}
+                <div id="recording-mode-select-wrapper" className="flex justify-between">
+                  <div id="recording-mode-selection" className="flex flex-col justify-start items-start gap-2">
+                  <Label className='text-xs ' htmlFor="recording-mode-select">
+                    {content.recordingMode}
+                  </Label>
+                  <Select
+                    value={selectedFrustumName}
+                    onValueChange={setSelectedFrustumName}
+                  >
+                    <SelectTrigger id="recording-mode-select" className="h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent id="recording-mode-select-content">
+                      <SelectItem value={FOV_ESTIMATE_VALUE}>
+                        {content.usingFovEstimate}
+                      </SelectItem>
+                      {frustumOptions.map((calibration) => (
+                        <SelectItem key={calibration.name} value={calibration.name}>
+                          {calibration.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  </div>
+
+                  <Button
+                    id="recording-frustum-upload"
+                    variant={'outline'}
+                    size={'icon'}
+                    title={String(content.uploadFrustumCalibrationTitle)}
+                    onClick={() => frustumUploadInputRef.current?.click()}
+                  >
+                    <FileUpIcon className="h-2 w-2" />
+                  </Button>
+                  <input
+                    ref={frustumUploadInputRef}
+                    type="file"
+                    accept=".json,application/json"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      if (file) {
+                        handleFrustumUpload(file)
+                      }
+                      e.target.value = ''
+                    }}
+                  />
+                </div>
+                {selectedCalibration ? (
+                    <Badge variant="secondary" className="text-xs w-fit text-green-700 dark:text-green-400">
+                      {content.calibratedIntrinsicsLoaded}{' '}
+                      {`(${String(content.meanError)}: ${selectedCalibration.meanReprojectionError.toFixed(1)} px)`}
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-xs w-fit text-muted-foreground">
+                      {content.usingFovEstimate}
+                    </Badge>
+                  )}
                 <Label className={'text-xs'} htmlFor="calibration-file-upload">
                   {content.calibrationFile}
                 </Label>

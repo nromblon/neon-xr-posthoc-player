@@ -1,0 +1,14 @@
+{
+  "name": "MQ3 Left Eye 1:1",
+  "recordingMode": "LeftEye",
+  "intrinsics": {
+    "fx": 610.7652402190282,
+    "fy": 609.1785014024488,
+    "cx": 513.0205671831113,
+    "cy": 448.3073298903687
+  },
+  "videoWidth": 1024,
+  "videoHeight": 1024,
+  "meanReprojectionError": 0.4281907704665624,
+  "solvedAt": "2026-06-16T03:08:37.864Z"
+}
