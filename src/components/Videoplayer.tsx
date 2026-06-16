@@ -1,14 +1,12 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useIntlayer } from 'react-intlayer'
-
 import { VideoControls } from './video-player/video-controls'
+import type { Output } from 'mediabunny'
+
 import type { SensorOffsetValues } from '@/lib/config-file'
-import type { type CameraIntrinsics,
-  Projector,
-  buildProjector,
-  debugProjector,
-  projectGazeSample } from '@/lib/gaze-projection'
+import type { CameraIntrinsics, Projector } from '@/lib/gaze-projection'
 import type { VideoExportState } from '@/lib/video-export'
+import { buildProjector, debugProjector, projectGazeSample } from '@/lib/gaze-projection'
 import { Button } from '@/components/ui/button'
 import { applySensorOffsetsToConfig } from '@/lib/config-file'
 import {
@@ -801,10 +799,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     let videoStream: MediaStream | null = null
     let cancelFrameCallback: (() => void) | null = null
     const visibilityAbortController = new AbortController()
-    let exportOutput: {
-      cancel: () => Promise<void>
-      finalize: () => Promise<void>
-    } | null = null
+    let exportOutput: Output | null = null
     let outputFinalized = false
 
     exportVideo.preload = 'auto'
@@ -877,7 +872,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         MediaStreamAudioTrackSource,
         Mp4OutputFormat,
         Output,
-        QUALITY_HIGH,
         VideoSample,
         VideoSampleSource,
       } = await import('mediabunny')
@@ -957,7 +951,9 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         codec: 'avc',
         keyFrameInterval: 2,
       })
-      const audioSource = new MediaStreamAudioTrackSource(audioTrack, {
+      // audioTrack is guaranteed non-null here: audioRequired is true above, so a
+      // missing track would have set audioSupportError and thrown before this point.
+      const audioSource = new MediaStreamAudioTrackSource(audioTrack!, {
         bitrate: 128_000,
         codec: 'aac',
       })
